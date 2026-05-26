@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster
+from models import Company, User, TableMaster, ItemCategory
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
                     UserUpdate,
                     TableCreate, 
-                    TableUpdate
+                    TableUpdate,
+                    ItemCategoryCreate,
+                    ItemCategoryUpdate
                 )
 
 # ==============
@@ -196,3 +198,45 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
 
     return db_table
     
+
+# ==============
+# ItemCategory
+# ==============
+
+def create_item_category(db: Session, category: ItemCategoryCreate):
+    db_category = ItemCategory (
+        category_name = category.category_name,
+        sort_order = category.sort_order,
+        is_active = category.is_active,
+    )
+
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+
+    return db_category
+
+def get_item_category(db: Session, category_id: int):
+    return db.query(ItemCategory).filter(ItemCategory.id == category_id).first()
+
+def get_item_categories(db: Session):
+    return db.query(ItemCategory).all()
+
+def update_item_category(db: Session, category_id: int, category_update: ItemCategoryUpdate):
+    db_category = get_item_category(db, category_id)
+
+    if db_category is None:
+        return None
+    if category_update.category_name is not None:
+        db_category.category_name = category_update.category_name
+
+    if category_update.sort_order is not None:
+        db_category.sort_order = category_update.sort_order
+
+    if category_update.is_active is not None:
+        db_category.is_active = category_update.is_active
+
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+

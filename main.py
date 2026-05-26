@@ -153,3 +153,44 @@ def update_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
 
+# =====================
+# Category
+# =====================
+@app.post("/categories", response_model=schemas.ItemCategoryResponse)
+def create_category(
+    category: schemas.ItemCategoryCreate,
+    db: Session = Depends(get_db)
+):
+    db_category = crud.get_item_category(db)
+    if db_category is not None:
+        raise HTTPException(status_code=400, detail="Category already exists")
+    return crud.create_item_category(db, category)
+
+@app.get("/categories/{category_id}", response_model=schemas.ItemCategoryResponse)
+def read_category(
+    category_id: int,
+    db: Session = Depends(get_db)
+):
+    db_category = crud.get_item_category(db, category_id)
+
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return db_category
+
+@app.get("/categories", response_model=list[schemas.ItemCategoryResponse])
+def read_categories(
+    db: Session = Depends(get_db)
+):
+    return crud.get_item_categories(db)
+
+@app.patch("/categories/{category_id}", response_model=schemas.ItemCategoryResponse)
+def update_categories(
+    category_id: int,
+    category_update: schemas.ItemCategoryUpdate,
+    db: Session = Depends(get_db)
+): 
+    db_category = crud.update_item_category(db, category_id, category_update)
+    
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return db_category
