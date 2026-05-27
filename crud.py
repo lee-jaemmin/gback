@@ -15,6 +15,18 @@ from schemas import (CompanyCreate,
                 )
 from typing import Optional
 
+def recalculate_table_total_price(db: Session, table_id: str):
+    db_table = get_table(db, table_id)
+
+    if db_table is None:
+        return None
+
+    purchases = get_purchases_by_table(db, table_id)
+
+    db_table.total_price = sum(purchase.total_price for purchase in purchases)
+
+    return db_table
+
 # ========================
 # Company
 # ========================
@@ -339,6 +351,8 @@ def create_purchase(
         item_name = item_name
     )
 
+    recalculate_table_total_price(db, purchase.table_id)
+
     db.add(db_purchase)
     db.commit()
     db.refresh(db_purchase)
@@ -372,6 +386,8 @@ def update_purchase(
         db_purchase.unit_price = purchase_update.unit_price
     # 총 가격 다시 계산
     db_purchase.total_price = db_purchase.unit_price * db_purchase.quantity
+    
+    recalculate_table_total_price(db, db_purchase.table_id)
     
     db.commit()
     db.refresh(db_purchase)
