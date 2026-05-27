@@ -255,7 +255,6 @@ class ReservationResponse(ReservationBase):
 
 # =========================
 # ReservationPurchase
-# 예약 손님이 구매하기로 한 상품
 # =========================
 
 class ReservationPurchaseCreate(BaseModel):
