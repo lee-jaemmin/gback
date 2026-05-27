@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation
+from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
@@ -13,7 +13,9 @@ from schemas import (CompanyCreate,
                     TablePurchaseCreate,
                     TablePurchaseUpdate,
                     ReservationCreate,
-                    ReservationUpdate
+                    ReservationUpdate,
+                    ReservationPurchaseCreate,
+                    ReservationPurchaseUpdate
                 )
 from typing import Optional
 
@@ -24,6 +26,18 @@ def recalculate_table_total_price(db: Session, table_id: str):
         return None
 
     purchases = get_purchases_by_table(db, table_id)
+
+    db_table.total_price = sum(purchase.total_price for purchase in purchases)
+
+    return db_table
+
+def recalculate_res_table_total_price(db: Session, table_id: str):
+    db_table = get_table(db, table_id)
+
+    if db_table is None:
+        return None
+
+    purchases = get_res_purchases_by_table(db, table_id)
 
     db_table.total_price = sum(purchase.total_price for purchase in purchases)
 
@@ -297,6 +311,7 @@ def get_items_by_category(db: Session, category_id: int, company_region: Optiona
         )
     return query.all()
 ## Item에는 region이 없고 Company에 있음. 그래서 join이 필요
+## 조인 할 수도 있고, 안 할 수 있을 때
 
 def get_items_by_company_and_category(
     company_id: str,
@@ -353,9 +368,9 @@ def create_purchase(
         item_name = item_name
     )
 
-    recalculate_table_total_price(db, purchase.table_id)
-
     db.add(db_purchase)
+    db.flush()
+    recalculate_table_total_price(db, purchase.table_id)
     db.commit()
     db.refresh(db_purchase)
     return db_purchase
@@ -386,7 +401,7 @@ def update_purchase(
         db_purchase.quantity = purchase_update.quantity
     if purchase_update.unit_price is not None:
         db_purchase.unit_price = purchase_update.unit_price
-    # 총 가격 다시 계산
+    # 품목별 총 가격 다시 계산
     db_purchase.total_price = db_purchase.unit_price * db_purchase.quantity
     
     recalculate_table_total_price(db, db_purchase.table_id)
@@ -440,6 +455,7 @@ def update_reservation(
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
     if reservation_update.customer_name is not None:
+
         db_reservation.customer_name = reservation_update.customer_name
     if reservation_update.customer_phone is not None:
         db_reservation.customer_phone = reservation_update.customer_phone
@@ -459,3 +475,104 @@ def delete_reservation(
     db.delete(db_reservation)
     db.commit()
     return db_reservation # 방금 삭제된 객체 반환
+
+# ========================
+# ReservationPurchase: table_id 접근 위해서는 Reservation을 거쳐야 함.
+# ========================
+def create_res_purchase(
+        db: Session,
+        res_purchase: ReservationPurchaseCreate
+):
+    db_reservation = get_reservation(db, res_purchase.reservation_id)
+    if db_reservation is None:
+        return None
+    
+    db_item = get_item(res_purchase.item_id, db)
+    if db_item is None:
+        return None
+    item_name = db_item.item_name
+    unit_price = db_item.item_price
+    table_id = db_reservation.table_id
+    
+    db_res_purchase = ReservationPurchase(
+        reservation_id = res_purchase.reservation_id,
+        item_id = res_purchase.item_id,
+        quantity = res_purchase.quantity,
+        item_name = item_name,
+        unit_price = unit_price,
+        total_price = unit_price * res_purchase.quantity,
+    )
+    db.add(db_res_purchase)
+    db.flush()
+
+    recalculate_res_table_total_price(db, table_id)
+
+    db.commit()
+    db.refresh(db_res_purchase)
+    return db_res_purchase
+
+def get_res_purchase (
+        db: Session,
+        res_purchase_id: int,
+):
+    return db.query(ReservationPurchase).filter(ReservationPurchase.id == res_purchase_id).first()
+
+def get_res_purchases_by_table (
+        db: Session,
+        table_id: str,
+):
+    return db.query(ReservationPurchase).join(Reservation).filter(Reservation.table_id == table_id).all()
+    ## 무조건 조인할 때는 이런 식으로
+
+def update_res_purchase(
+        db: Session,
+        res_purchase_id: int,
+        res_purchase_update: ReservationPurchaseUpdate
+):
+    db_res_purchase = get_res_purchase(db, res_purchase_id)
+    if db_res_purchase is None:
+        return None
+    
+    if res_purchase_update.item_id is not None:
+        new_item = get_item(res_purchase_update.item_id, db)
+        if new_item is None:
+            return None
+        db_res_purchase.item_id = new_item.id
+        db_res_purchase.item_name = new_item.item_name
+        db_res_purchase.unit_price = new_item.item_price
+
+    if res_purchase_update.quantity is not None:
+        db_res_purchase.quantity = res_purchase_update.quantity
+    
+    # 품목별 총 가격 다시 계산
+    db_res_purchase.total_price = db_res_purchase.unit_price * db_res_purchase.quantity
+    
+    db_reservation = get_reservation(db, db_res_purchase.reservation_id)
+    table_id = db_reservation.table_id
+    ## Relation 이용하면
+    ## table_id = db_res_purchase.reservation.table_id
+    ## 이렇게 됨.
+
+    recalculate_res_table_total_price(db, table_id)
+    
+    db.commit()
+    db.refresh(db_res_purchase)
+    return db_res_purchase
+
+def delete_res_purchase(
+        db: Session,
+        res_purchase_id: int,
+):
+    db_res_purchase = get_res_purchase(db, res_purchase_id)
+    if db_res_purchase is None:
+        return None
+    
+    db_reservation = get_reservation(db, db_res_purchase.reservation_id)
+    table_id = db_reservation.table_id if db_reservation is not None else None
+
+    db.delete(db_res_purchase)
+    db.flush()
+    if table_id is not None:
+        recalculate_res_table_total_price(db, table_id)
+    db.commit()
+    return db_res_purchase

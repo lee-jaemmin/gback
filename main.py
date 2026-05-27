@@ -364,3 +364,63 @@ def delete_reservation(
         raise HTTPException(status_code=404, detail="Reservation not found")
 
     return db_reservation
+
+# =====================
+# ReservationPurchase API
+# =====================
+@app.post("/res-purchases", response_model=schemas.ReservationPurchaseResponse)
+def create_res_purchase(
+    res_purchase: schemas.ReservationPurchaseCreate,
+    db: Session = Depends(get_db)
+):
+    db_reservation = crud.get_reservation(db, res_purchase.reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    db_item = crud.get_item(db, res_purchase.item_id)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return crud.create_res_purchase(db, res_purchase)
+
+@app.get("/res-purchases/{res_purchase_id}", response_model=schemas.ReservationPurchaseResponse)
+def read_res_purchase(
+    res_purchase_id: int,
+    db: Session = Depends(get_db)
+):
+    db_res_purchase = crud.get_res_purchase(db, res_purchase_id)
+    if db_res_purchase is None:
+        raise HTTPException(status_code=404, detail="ReservationPurchase not found")
+    return db_res_purchase
+
+@app.get("/tables/{table_id}/res-purchases", response_model=list[schemas.ReservationPurchaseResponse])
+def read_res_purchases_by_table(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return crud.get_res_purchases_by_table(db, table_id)
+
+@app.patch("/res-purchases/{res_purchase_id}", response_model=schemas.ReservationPurchaseResponse)    
+def update_res_purchase(
+    res_purchase_id: int,
+    res_purchase_update: schemas.ReservationPurchaseUpdate,
+    db: Session = Depends(get_db)
+):
+    db_res_purchase = crud.get_res_purchase(db, res_purchase_id)
+    if db_res_purchase is None:
+        raise HTTPException(status_code=404, detail="ReservationPurchase or Item not found")
+    
+    return crud.update_res_purchase(db, res_purchase_id, res_purchase_update)
+
+@app.delete("/res-purchases/{res_purchase_id}", response_model=schemas.ReservationPurchaseResponse)
+def delete_res_purchase(
+    res_purchase_id: int,
+    db: Session = Depends(get_db),
+):
+    db_res_purchase = crud.delete_res_purchase(db, res_purchase_id)
+
+    if db_res_purchase is None:
+        raise HTTPException(status_code=404, detail="ReservationPurchase not found")
+
+    return db_res_purchase
