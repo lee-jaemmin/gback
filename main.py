@@ -65,9 +65,9 @@ def create_user(
     db: Session = Depends(get_db)
 ):
     db_user = crud.get_user(db, user.id)
-
     if db_user is not None:
         raise HTTPException(status_code=400, detail="User alreay exists")
+
     return crud.create_user(db, user)
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)
@@ -154,16 +154,13 @@ def update_table(
     return db_table
 
 # =====================
-# Category
+# Category API
 # =====================
 @app.post("/categories", response_model=schemas.ItemCategoryResponse)
 def create_category(
     category: schemas.ItemCategoryCreate,
     db: Session = Depends(get_db)
 ):
-    db_category = crud.get_item_category(db)
-    if db_category is not None:
-        raise HTTPException(status_code=400, detail="Category already exists")
     return crud.create_item_category(db, category)
 
 @app.get("/categories/{category_id}", response_model=schemas.ItemCategoryResponse)
@@ -194,3 +191,53 @@ def update_categories(
     if db_category is None:
         raise HTTPException(status_code=404, detail="Category not found")
     return db_category
+
+# =====================
+# Item API
+# =====================
+@app.post("/items", response_model=schemas.ItemResponse)
+def create_item(
+    item: schemas.ItemCreate,
+    db: Session = Depends(get_db)
+):    
+    return crud.create_item(db, item)
+
+@app.get("/items/{item_id}", response_model=schemas.ItemResponse)
+def read_item(
+    item_id: int,
+    db: Session = Depends(get_db)
+):
+    db_item = crud.get_item(item_id, db)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return db_item
+
+@app.get("/companies/{company_id}/items", response_model=list[schemas.ItemResponse])
+def read_items_by_company(
+    company_id: str,
+    category_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    if category_id is None:
+        return crud.get_items_by_company(company_id, db)    
+    return crud.get_items_by_company_and_category(company_id, category_id, db)
+
+@app.get("/categories/{category_id}/items", response_model=list[schemas.ItemResponse])
+def read_items_by_category(
+    category_id: int,
+    company_region: Optional[str]=None,
+    db: Session = Depends(get_db)
+):
+    return crud.get_items_by_category(db, category_id, company_region)
+
+@app.patch("/items/{item_id}", response_model=schemas.ItemResponse)
+def update_item(
+    item_id: int,
+    item_update: schemas.ItemUpdate,
+    db: Session = Depends(get_db)
+):
+    db_item = crud.update_item(item_id, item_update, db)
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return db_item
+

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory
+from models import Company, User, TableMaster, ItemCategory, Item
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
@@ -7,8 +7,11 @@ from schemas import (CompanyCreate,
                     TableCreate, 
                     TableUpdate,
                     ItemCategoryCreate,
-                    ItemCategoryUpdate
+                    ItemCategoryUpdate,
+                    ItemCreate,
+                    ItemUpdate,
                 )
+from typing import Optional
 
 # ==============
 # Company
@@ -17,7 +20,7 @@ def create_company(db: Session, company: CompanyCreate):
     db_company = Company(
         id=company.id,
         name=company.name,
-        addr=company.addr,
+        region=company.region,
     )
 
     db.add(db_company)
@@ -41,8 +44,8 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     if company_update.name is not None:
         db_company.name = company_update.name
 
-    if company_update.addr is not None:
-        db_company.addr = company_update.addr
+    if company_update.region is not None:
+        db_company.region = company_update.region
 
     db.commit()
     db.refresh(db_company)
@@ -52,7 +55,6 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
 # ==============
 # User
 # ==============
-
 def create_user(db: Session, user: UserCreate):
     db_user = User(
         id=user.id,
@@ -202,7 +204,6 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
 # ==============
 # ItemCategory
 # ==============
-
 def create_item_category(db: Session, category: ItemCategoryCreate):
     db_category = ItemCategory (
         category_name = category.category_name,
@@ -240,3 +241,77 @@ def update_item_category(db: Session, category_id: int, category_update: ItemCat
     db.refresh(db_category)
     return db_category
 
+# ==============
+# Item
+# ==============
+def create_item(
+        db: Session,
+        item: ItemCreate,
+):
+    db_item = Item (
+        item_name = item.item_name,
+        item_price = item.item_price,
+        is_active = item.is_active,
+        company_id = item.company_id,
+        category_id = item.category_id,
+    )
+
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+
+def get_item(
+        item_id: int,
+        db: Session,
+):
+    return db.query(Item).filter(Item.id == item_id).first()
+
+def get_items_by_company(
+        company_id: str,
+        db: Session,
+):
+    return db.query(Item).filter(Item.company_id == company_id).all()
+
+def get_items_by_category(db: Session, category_id: int, company_region: Optional[str] = None):
+    query = db.query(Item).filter(Item.category_id == category_id)
+    if company_region is not None:   
+        query = (
+            query.join(Company).filter(Company.region == company_region)
+        )
+    return query.all()
+## Item에는 region이 없고 Company에 있음. 그래서 join이 필요
+
+def get_items_by_company_and_category(
+    company_id: str,
+    category_id: int,
+    db: Session,
+):
+    return (
+        db.query(Item)
+        .filter(
+            Item.company_id == company_id,
+            Item.category_id == category_id,
+        )
+        .all()
+    )
+
+def update_item(
+        item_id: int,
+        item_update: ItemUpdate,
+        db: Session,
+):
+    db_item = get_item(item_id, db)
+
+    if db_item is None:
+        return None
+    if item_update.item_name is not None:
+        db_item.item_name = item_update.item_name
+    if item_update.item_price is not None:
+        db_item.item_price = item_update.item_price
+    if item_update.is_active is not None:
+        db_item.is_active = item_update.is_active
+
+    db.commit()
+    db.refresh(db_item)
+    return db_item
