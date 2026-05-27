@@ -65,9 +65,11 @@ def create_user(
     db: Session = Depends(get_db)
 ):
     db_user = crud.get_user(db, user.id)
+    db_company = crud.get_company(db, user.company_id)
     if db_user is not None:
         raise HTTPException(status_code=400, detail="User alreay exists")
-
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
     return crud.create_user(db, user)
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)
@@ -76,7 +78,6 @@ def read_user (
         db: Session = Depends(get_db),
 ):
     db_user = crud.get_user(db, user_id)
-
     if db_user is None:
         raise HTTPException(status_code=404, detail='User not found')
     return db_user
@@ -95,7 +96,6 @@ def update_user(
     db: Session = Depends(get_db)
 ):
     db_user = crud.update_user(db, user_id, user_update)
-
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
@@ -110,9 +110,16 @@ def create_table(
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, table.id)
+    db_company = crud.get_company(db, table.company_id)
+    db_user = crud.get_user(db, table.user_id)
+    # db_group = crud.get_gr
 
     if db_table is not None:
         raise HTTPException(status_code=400, detail="Table alreay exists")
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     return crud.create_table(db, table)
 
 @app.get("/tables/{table_id}", response_model=schemas.TableResponse)
@@ -149,6 +156,8 @@ def update_table(
     db: Session = Depends(get_db)
 ):
     db_table = crud.update_table(db, table_update, table_id)
+    db_user = crud.get_user(db, table_update.user_id)
+    # db_group = crud.get
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
@@ -200,6 +209,12 @@ def create_item(
     item: schemas.ItemCreate,
     db: Session = Depends(get_db)
 ):    
+    db_company = crud.get_company(db, item.company_id)
+    db_category = crud.get_item_category(db, item.category_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
     return crud.create_item(db, item)
 
 @app.get("/items/{item_id}", response_model=schemas.ItemResponse)
@@ -237,7 +252,10 @@ def update_item(
     db: Session = Depends(get_db)
 ):
     db_item = crud.update_item(item_id, item_update, db)
+    db_category = crud.get_item_category(db, item_update.category_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    if db_category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
     return db_item
 
