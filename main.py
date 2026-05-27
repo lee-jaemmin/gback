@@ -259,3 +259,55 @@ def update_item(
         raise HTTPException(status_code=404, detail="Category not found")
     return db_item
 
+# =====================
+# Purchase API
+# =====================
+@app.post("/purchases", response_model=schemas.TablePurchaseResponse)
+def create_purchase(
+    purchase: schemas.TablePurchaseCreate,
+    db: Session = Depends(get_db)
+):
+    #FK check
+    db_table = crud.get_table(db, purchase.table_id)
+    db_item = crud.get_item(purchase.item_id, db)
+
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return crud.create_purchase(db, purchase)
+
+@app.get("/purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
+def read_purchase(
+    purchase_id: int,
+    db: Session = Depends(get_db)
+):
+    db_purchase = crud.get_purchase(db, purchase_id)
+    if db_purchase is None:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return db_purchase
+
+@app.get("/tables/{tables_id}/purchases", response_model=list[schemas.TablePurchaseResponse])
+def read_purchases_by_table (
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    return crud.get_purchases_by_table(db, table_id)
+    
+@app.patch("purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
+def update_purchase(
+    purchase_id: int,
+    purchase_update: schemas.TablePurchaseUpdate,
+    db: Session = Depends(get_db)
+):
+    db_purchase = crud.get_purchase(db, purchase_id)
+    if db_purchase is None:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+
+    return crud.update_purchase(db, purchase_id, purchase_update)
+    

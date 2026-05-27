@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory, Item
+from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
@@ -10,12 +10,14 @@ from schemas import (CompanyCreate,
                     ItemCategoryUpdate,
                     ItemCreate,
                     ItemUpdate,
+                    TablePurchaseCreate,
+                    TablePurchaseUpdate
                 )
 from typing import Optional
 
-# ==============
+# ========================
 # Company
-# ==============
+# ========================
 def create_company(db: Session, company: CompanyCreate):
     db_company = Company(
         id=company.id,
@@ -52,9 +54,9 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
 
     return db_company
 
-# ==============
+# ========================
 # User
-# ==============
+# ========================
 def create_user(db: Session, user: UserCreate):
     db_user = User(
         id=user.id,
@@ -103,9 +105,9 @@ def update_user(db: Session, user_id:str, user_update: UserUpdate):
 
     return db_user
 
-# ==============
+# ========================
 # Table
-# ==============
+# ========================
 def create_table(db: Session, table: TableCreate):
     db_table = TableMaster(
         id = table.id,
@@ -201,9 +203,9 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
     return db_table
     
 
-# ==============
+# ========================
 # ItemCategory
-# ==============
+# ========================
 def create_item_category(db: Session, category: ItemCategoryCreate):
     db_category = ItemCategory (
         category_name = category.category_name,
@@ -241,9 +243,9 @@ def update_item_category(db: Session, category_id: int, category_update: ItemCat
     db.refresh(db_category)
     return db_category
 
-# ==============
+# ========================
 # Item
-# ==============
+# ========================
 def create_item(
         db: Session,
         item: ItemCreate,
@@ -315,3 +317,62 @@ def update_item(
     db.commit()
     db.refresh(db_item)
     return db_item
+
+# ========================
+# TablePurchase 여기서부터는 db: Session 맨 앞에.
+# ========================
+def create_purchase(
+    db: Session,
+    purchase: TablePurchaseCreate
+):
+    db_item = get_item(purchase.item_id, db)
+    unit_price = db_item.item_price
+    total_price = unit_price * purchase.quantity
+    item_name = db_item.item_name
+
+    db_purchase = TablePurchase(
+        table_id = purchase.table_id,
+        item_id = purchase.item_id,
+        quantity = purchase.quantity,
+        unit_price = unit_price,
+        total_price = total_price,
+        item_name = item_name
+    )
+
+    db.add(db_purchase)
+    db.commit()
+    db.refresh(db_purchase)
+    return db_purchase
+
+def get_purchase(
+        db: Session,
+        purchase_id: int,
+):
+    return db.query(TablePurchase).filter(TablePurchase.id == purchase_id).first()
+
+def get_purchases_by_table(
+        db: Session,
+        table_id: str,
+):
+    return db.query(TablePurchase).filter(TablePurchase.table_id == table_id).all()
+
+def update_purchase(
+        db: Session,
+        purchase_id: int,
+        purchase_update: TablePurchaseUpdate
+):
+    db_purchase = get_purchase(db, purchase_id)
+    if db_purchase is None:
+        return None
+    if purchase_update.item_name is not None:
+        db_purchase.item_name = purchase_update.item_name
+    if purchase_update.quantity is not None:
+        db_purchase.quantity = purchase_update.quantity
+    if purchase_update.unit_price is not None:
+        db_purchase.unit_price = purchase_update.unit_price
+    # 총 가격 다시 계산
+    db_purchase.total_price = db_purchase.unit_price * db_purchase.quantity
+    
+    db.commit()
+    db.refresh(db_purchase)
+    return db_purchase
