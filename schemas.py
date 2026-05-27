@@ -227,7 +227,6 @@ class TablePurchaseResponse(BaseModel):
 
 class ReservationBase(BaseModel):
     reservation_time: datetime
-    reservation_price: int = 0
 
     customer_name: str
     customer_phone: str = ""
@@ -239,7 +238,6 @@ class ReservationCreate(ReservationBase):
 
 class ReservationUpdate(BaseModel):
     reservation_time: Optional[datetime] = None
-    reservation_price: Optional[int] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
 
