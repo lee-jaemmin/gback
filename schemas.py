@@ -11,7 +11,7 @@ from datetime import datetime
 
 class CompanyBase(BaseModel):
     name: str
-    addr: str
+    region: str
 
 
 class CompanyCreate(CompanyBase):
