@@ -310,4 +310,57 @@ def update_purchase(
         raise HTTPException(status_code=404, detail="Purchase not found")
 
     return crud.update_purchase(db, purchase_id, purchase_update)
-    
+
+# =====================
+# Reservation API
+# =====================
+@app.post("/reservations", response_model=schemas.ReservationResponse)
+def create_reservation(
+    reservation: schemas.ReservationCreate,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, reservation.table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return crud.create_reservation(db, reservation)
+
+@app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
+def read_reservation(
+    reservation_id: int,
+    db: Session = Depends(get_db)
+):
+    db_reservation = crud.get_reservation(db, reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    return db_reservation
+
+@app.get("/tables/{table_id}/reservations", response_model=list[schemas.ReservationResponse])
+def read_reservations_by_table(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_reservation = crud.get_reservations_by_table(db, table_id)
+    return db_reservation
+
+@app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
+def update_reservation(
+    reservation_update: schemas.ReservationUpdate,
+    reservation_id: int,
+    db: Session = Depends(get_db)
+):
+    db_reservation = crud.get_reservation(db, reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservaion not found")
+    return crud.update_reservation(db, reservation_update, reservation_id)
+
+@app.delete("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
+def delete_reservation(
+    reservation_id: int,
+    db: Session = Depends(get_db),
+):
+    db_reservation = crud.delete_reservation(db, reservation_id)
+
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    return db_reservation

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase
+from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
@@ -11,7 +11,9 @@ from schemas import (CompanyCreate,
                     ItemCreate,
                     ItemUpdate,
                     TablePurchaseCreate,
-                    TablePurchaseUpdate
+                    TablePurchaseUpdate,
+                    ReservationCreate,
+                    ReservationUpdate
                 )
 from typing import Optional
 
@@ -392,3 +394,68 @@ def update_purchase(
     db.commit()
     db.refresh(db_purchase)
     return db_purchase
+
+# ========================
+# Reservation
+# ========================
+def create_reservation(
+        db: Session,
+        reservation: ReservationCreate
+): 
+    db_reservation = Reservation (
+        reservation_time = reservation.reservation_time,
+        reservation_price = reservation.reservation_price,
+        customer_name = reservation.customer_name,
+        customer_phone = reservation.customer_phone,
+        table_id = reservation.table_id,
+    )
+
+    db.add(db_reservation)
+    db.commit()
+    db.refresh(db_reservation)
+    return db_reservation
+
+def get_reservation(
+        db: Session,
+        reservation_id: int,
+):
+    return db.query(Reservation).filter(Reservation.id == reservation_id).first()
+
+def get_reservations_by_table (
+        db: Session,
+        table_id: str,
+):
+    return db.query(Reservation).filter(Reservation.table_id == table_id).all()
+
+def update_reservation(
+        db: Session,
+        reservation_update: ReservationUpdate,
+        reservation_id: int,
+):
+    db_reservation = get_reservation(db, reservation_id)
+    
+    if db_reservation is None:
+        return None
+    
+    if reservation_update.reservation_time is not None:
+        db_reservation.reservation_time = reservation_update.reservation_time
+    if reservation_update.customer_name is not None:
+        db_reservation.customer_name = reservation_update.customer_name
+    if reservation_update.customer_phone is not None:
+        db_reservation.customer_phone = reservation_update.customer_phone
+    
+    db.commit()
+    db.refresh(db_reservation)
+    return db_reservation
+
+def delete_reservation(
+        db: Session,
+        reservation_id: int,
+):
+    db_reservation = get_reservation(db, reservation_id)
+    if db_reservation is None:
+        return db_reservation
+    
+    db.delete(db_reservation)
+    db.commit()
+    return db_reservation # 방금 삭제된 객체 반환
