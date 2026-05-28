@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase
+from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, TableHistory, TableHistoryPurchase
 from schemas import (CompanyCreate,
                     CompanyUpdate,
                     UserCreate,
@@ -15,7 +15,9 @@ from schemas import (CompanyCreate,
                     ReservationCreate,
                     ReservationUpdate,
                     ReservationPurchaseCreate,
-                    ReservationPurchaseUpdate
+                    ReservationPurchaseUpdate,
+                    TableHistoryCreate,
+
                 )
 from typing import Optional
 
@@ -354,7 +356,23 @@ def create_purchase(
     db: Session,
     purchase: TablePurchaseCreate
 ):
-    db_item = get_item(purchase.item_id, db)
+    db_item = get_item(purchase.item_id, db) # 이번에 주문한 아이템.
+
+    existing_purchase = (
+        db.query(TablePurchase).filter( # 어느 테이블 뒤질지 먼저
+            TablePurchase.table_id == purchase.table_id,
+            TablePurchase.item_id == purchase.item_id).first()
+        )
+    
+    if existing_purchase is not None:
+        existing_purchase.quantity += purchase.quantity
+        # 바뀐 품목당 가격 재계산
+        existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
+        recalculate_table_total_price(db, existing_purchase.table_id)
+        db.commit()
+        db.refresh(existing_purchase)
+        return existing_purchase
+
     unit_price = db_item.item_price
     total_price = unit_price * purchase.quantity
     item_name = db_item.item_name
@@ -576,3 +594,4 @@ def delete_res_purchase(
         recalculate_res_table_total_price(db, table_id)
     db.commit()
     return db_res_purchase
+
