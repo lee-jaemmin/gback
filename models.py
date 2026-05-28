@@ -252,7 +252,6 @@ class TableHistory(Base):
     remark = Column(Text, default="", nullable=False)
 
     user_id = Column(String, default="", nullable=False)
-    user_name = Column(String, default="", nullable=False)
     company_id = Column(String, nullable=False)
 
     registered_at = Column(DateTime(timezone=True), nullable=True)
