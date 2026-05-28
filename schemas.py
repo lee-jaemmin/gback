@@ -343,11 +343,6 @@ class TableHistoryCreate(TableHistoryBase):
 
 class TableHistoryResponse(BaseModel):
     id: int
-    item_id: int
-    item_name: str
-    quantity: int
-    unit_price: int
-    total_price: int
     created_at: datetime
 
     class Config:
