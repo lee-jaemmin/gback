@@ -424,3 +424,70 @@ def delete_res_purchase(
         raise HTTPException(status_code=404, detail="ReservationPurchase not found")
 
     return db_res_purchase
+
+# =====================
+# History API
+# =====================
+@app.post("/tables/{table_id}/out", response_model=schemas.TableHistoryResponse)
+def table_out(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    db_history = crud.table_out(db, table_id)
+    if db_history is None:
+        raise HTTPException(status_code=404, detail="Table or Purchases not found")
+    return db_history
+
+@app.get("/histories/{history_id}", response_model=schemas.TableHistoryResponse)
+def read_history(
+    history_id: int,
+    db: Session = Depends(get_db)
+):
+    db_history = crud.get_history(db, history_id)
+    if db_history is None:
+        raise HTTPException(status_code=404, detail="History not found")
+    return db_history
+
+@app.get("/tables/{table_id}/histories", response_model=list[schemas.TableHistoryResponse])
+def read_histories_by_table(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return crud.get_histories_by_table(db, table_id)
+    
+@app.get("/history-purchases/{history_purchase_id}", response_model=schemas.TableHistoryPurchaseResponse)
+def read_history_purchase(
+    history_purchase_id: int,
+    db: Session = Depends(get_db)
+):
+    db_history_purchase = crud.get_history_purchase(db, history_purchase_id)
+    if db_history_purchase is None:
+        raise HTTPException(status_code=404, detail="HistoryPurchase not found")
+    return db_history_purchase
+
+@app.get("/tables/{table_id}/history-purchases", response_model=list[schemas.TableHistoryPurchaseResponse])
+def read_history_purchases_by_table(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return crud.get_history_purchases_by_table(db ,table_id)
+
+@app.get("/histories/{history_id}/history-purchases", response_model=list[schemas.TableHistoryPurchaseResponse])
+def read_history_purchases_by_history(
+    history_id: int,
+    db: Session = Depends(get_db)
+):
+    db_history = crud.get_history(db, history_id)
+    if db_history is None:
+        raise HTTPException(status_code=404, detail="History not found")
+    return crud.get_history_purchases_by_history(db ,history_id)
+
