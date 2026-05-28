@@ -20,6 +20,7 @@ from schemas import (CompanyCreate,
 
                 )
 from typing import Optional
+from datetime import datetime, UTC
 
 def recalculate_table_total_price(db: Session, table_id: str):
     db_table = get_table(db, table_id)
@@ -594,4 +595,74 @@ def delete_res_purchase(
         recalculate_res_table_total_price(db, table_id)
     db.commit()
     return db_res_purchase
+
+# ========================
+# TableOut
+# ========================
+def table_out(
+        db: Session,
+        table_id: str,     
+): 
+    db_table = get_table(db, table_id) # 해당 테이블 가져옴
+    if db_table is None:
+        return None
+    
+    db_purchases = get_purchases_by_table(db, table_id)
+    # 해당 테이블의 구매 리스트 ex. 호세3, 모엣1, 잭다니엘2 ... 
+    # 아웃 시킬 때 db에서 내역을 날린다면, 현재 사용 중인 기록만 남게 됨.
+    if len(db_purchases) == 0:
+        return None
+    
+    
+    db_history = TableHistory (
+        table_id = table_id,
+        tablename = db_table.tablename,
+        section = db_table.section,
+        customer_name = db_table.customer,
+        customer_phone = db_table.phonenumber,
+        persons = db_table.persons,
+        remark = db_table.remark,
+        user_id = db_table.user_id,
+        company_id = db_table.company_id,
+        registered_at = db_table.registered_at,
+        out_at = datetime.now(UTC)
+    )
+
+    db.add(db_history)
+    db.flush()
+
+    for purchase in db_purchases:
+        db_history_purchase = TableHistoryPurchase (
+            history_id = db_history.id,
+            item_id = purchase.item_id,
+            item_name = purchase.item_name,
+            quantity = purchase.quantity,
+            unit_price = purchase.unit_price,
+            total_price = purchase.total_price,
+            created_at = datetime.now(UTC)
+        )
+        db.add(db_history_purchase)
+
+    # 이제 구매 내역 지우기
+    for purchase in db_purchases:
+        db.delete(purchase)
+
+    # 만약 아웃된 애가 마스터라면
+    ## 테이블 그룹 crud를 만들기 ## 
+
+    # 테이블 초기화
+    db_table.status = 'available'
+    db_table.customer = ""
+    db_table.phonenumber = ""
+    db_table.persons = 0
+    db_table.remark = ""
+    db_table.total_price = 0
+    db_table.registered_at = None
+    db_table.ismaster = False
+    db_table.mastertablenumber = None 
+    db_table.group_id = None 
+    db_table.user_id = None 
+
+    db.commit()
+    return db_history
 
