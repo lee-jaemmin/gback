@@ -666,3 +666,38 @@ def table_out(
     db.commit()
     return db_history
 
+def get_history(
+        db: Session,
+        history_id: int,
+):
+    return db.query(TableHistory).filter(TableHistory.id == history_id).first()
+
+def get_histories_by_table(
+        db: Session,
+        table_id: str,
+):
+    return db.query(TableHistory).filter(TableHistory.table_id == table_id).all()
+    
+def get_history_purchase(
+        db: Session,
+        history_purchase_id: int,
+):
+    return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.id == history_purchase_id).first()
+
+def get_history_purchases_by_table (
+        db: Session,
+        table_id: str,
+):
+    return db.query(TableHistoryPurchase).join(TableHistory).filter(TableHistory.table_id == table_id).all()
+    ## 만약 Model.py에 relationship이 없으면
+    ## .join(TableHistory, TableHistoryPurchase.history_id == TableHistory.id)
+    ## 이렇게 써야함.
+
+def get_history_purchases_by_history(
+        db: Session,
+        history_id: int
+):
+    db_history = get_history(db, history_id)
+    if db_history is None:
+        return None
+    return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.history_id == history_id).all()
