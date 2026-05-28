@@ -357,3 +357,21 @@ class TableHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# =========================
+# TableHistoryPurchase
+# =========================
+class TableHistoryPurchaseBase(BaseModel):
+    history_id: int
+    item_id: int
+    item_name: str
+    quantity: int = 1
+    unit_price: int = 0
+    total_price: int = 0
+class TableHistoryPurchaseCreate(TableHistoryPurchaseBase):
+    pass
+class TableHistoryPurchaseResponse(TableHistoryPurchaseBase):
+    id: int
+    created_at: datetime
+    class Config:
+        from_attributes = True
