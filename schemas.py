@@ -325,9 +325,6 @@ class TableHistoryBase(BaseModel):
     table_id: str
     tablename: str
     section: str
-
-    total_price: int = 0
-
     customer_name: str = ""
     customer_phone: str = ""
     persons: int = 0
@@ -347,8 +344,7 @@ class TableHistoryCreate(TableHistoryBase):
 
 class TableHistoryResponse(BaseModel):
     id: int
-    history_id: int
-    item_id: Optional[int] = None
+    item_id: int
     item_name: str
     quantity: int
     unit_price: int
