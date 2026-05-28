@@ -296,11 +296,13 @@ class ReservationPurchaseResponse(BaseModel):
 class TableGroupCreate(BaseModel):
     id: str
     master_table_id: str
+    tables_ids: list[str]
     company_id: str
 
 
 class TableGroupUpdate(BaseModel):
     master_table_id: Optional[str] = None
+    tables_ids: Optional[list[str]] = None
     closed_at: Optional[datetime] = None
 
 
