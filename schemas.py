@@ -84,7 +84,7 @@ class TableBase(BaseModel):
     registered_at: Optional[datetime] = None
 
     ismaster: bool = False
-    mastertablenumber: Optional[str] = None
+    mastertable_id: Optional[str] = None
 
 
 class TableCreate(TableBase):
@@ -111,7 +111,7 @@ class TableUpdate(BaseModel):
     group_id: Optional[str] = None
 
     ismaster: Optional[bool] = None
-    mastertablenumber: Optional[str] = None
+    mastertable_id: Optional[str] = None
 
 
 class TableResponse(TableBase):

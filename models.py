@@ -76,7 +76,7 @@ class TableMaster(Base):
     registered_at = Column(DateTime(timezone=True), nullable=True)
 
     ismaster = Column(Boolean, default=False, nullable=False)
-    mastertablenumber = Column(String, nullable=True)
+    mastertable_id = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
