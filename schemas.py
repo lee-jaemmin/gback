@@ -331,7 +331,6 @@ class TableHistoryBase(BaseModel):
     remark: str = ""
 
     user_id: str = ""
-    user_name: str = ""
     company_id: str
 
     registered_at: Optional[datetime] = None
