@@ -246,8 +246,6 @@ class TableHistory(Base):
     tablename = Column(String, nullable=False)
     section = Column(String, nullable=False)
 
-    total_price = Column(Integer, default=0, nullable=False)
-
     customer_name = Column(String, default="", nullable=False)
     customer_phone = Column(String, default="", nullable=False)
     persons = Column(Integer, default=0, nullable=False)
