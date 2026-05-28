@@ -275,7 +275,7 @@ class TableHistoryPurchase(Base):
 
     history_id = Column(Integer, ForeignKey("table_histories.id"), nullable=False)
 
-    item_id = Column(Integer, nullable=True)
+    item_id = Column(Integer, nullable=False)
     item_name = Column(String, nullable=False)
     quantity = Column(Integer, default=1, nullable=False)
     unit_price = Column(Integer, default=0, nullable=False)
