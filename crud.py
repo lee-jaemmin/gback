@@ -1,24 +1,13 @@
 from sqlalchemy.orm import Session
-from models import Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, TableHistory, TableHistoryPurchase
-from schemas import (CompanyCreate,
-                    CompanyUpdate,
-                    UserCreate,
-                    UserUpdate,
-                    TableCreate, 
-                    TableUpdate,
-                    ItemCategoryCreate,
-                    ItemCategoryUpdate,
-                    ItemCreate,
-                    ItemUpdate,
-                    TablePurchaseCreate,
-                    TablePurchaseUpdate,
-                    ReservationCreate,
-                    ReservationUpdate,
-                    ReservationPurchaseCreate,
-                    ReservationPurchaseUpdate,
-                    TableHistoryCreate,
-
-                )
+from models import ( 
+            Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
+            TableHistory, TableHistoryPurchase
+        )
+from schemas import (
+            CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
+            ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
+            ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate,
+        )
 from typing import Optional
 from datetime import datetime, UTC
 
@@ -225,8 +214,8 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
     if table_update.ismaster is not None:
         db_table.ismaster = table_update.ismaster
 
-    if table_update.mastertablenumber is not None:
-        db_table.mastertablenumber = table_update.mastertablenumber
+    if table_update.mastertable_id is not None:
+        db_table.mastertable_id = table_update.mastertable_id
 
     db.commit()
     db.refresh(db_table)
@@ -659,7 +648,7 @@ def table_out(
     db_table.total_price = 0
     db_table.registered_at = None
     db_table.ismaster = False
-    db_table.mastertablenumber = None 
+    db_table.mastertable_id = None 
     db_table.group_id = None 
     db_table.user_id = None 
 
@@ -698,3 +687,4 @@ def get_history_purchases_by_history(
         history_id: int
 ):
     return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.history_id == history_id).all()
+
