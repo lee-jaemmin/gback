@@ -20,7 +20,7 @@ class CompanyCreate(CompanyBase):
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
-    addr: Optional[str] = None
+    region: Optional[str] = None
 
 
 class CompanyResponse(CompanyBase):
