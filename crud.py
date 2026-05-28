@@ -697,7 +697,4 @@ def get_history_purchases_by_history(
         db: Session,
         history_id: int
 ):
-    db_history = get_history(db, history_id)
-    if db_history is None:
-        return None
     return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.history_id == history_id).all()
