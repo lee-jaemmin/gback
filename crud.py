@@ -634,13 +634,12 @@ def table_out(
     db_table = get_table(db, table_id) # 해당 테이블 가져옴
     if db_table is None:
         return None
+    if db_table.status != "inuse":
+        return "TABLE_NOT_USING"
     
     db_purchases = get_purchases_by_table(db, table_id)
     # 해당 테이블의 구매 리스트 ex. 호세3, 모엣1, 잭다니엘2 ... 
-    # 아웃 시킬 때 db에서 내역을 날린다면, 현재 사용 중인 기록만 남게 됨.
-    if len(db_purchases) == 0:
-        return None
-    
+    # 아웃 시킬 때 db에서 내역을 날린다면, 현재 사용 중인 기록만 남게 됨.    
     
     db_history = TableHistory (
         table_id = table_id,

@@ -451,10 +451,12 @@ def table_out(
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    db_history = crud.table_out(db, table_id)
-    if db_history is None:
-        raise HTTPException(status_code=404, detail="Table or Purchases not found")
-    return db_history
+    result = crud.table_out(db, table_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "TABLE_NOT_USING":
+        raise HTTPException(status_code=400, detail="Table is not using")
+    return result
 
 @app.get("/histories/{history_id}", response_model=schemas.TableHistoryResponse)
 def read_history(
