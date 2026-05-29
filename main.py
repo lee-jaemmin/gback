@@ -299,7 +299,7 @@ def read_purchases_by_table (
     
     return crud.get_purchases_by_table(db, table_id)
     
-@app.patch("purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
+@app.patch("/purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
 def update_purchase(
     purchase_id: int,
     purchase_update: schemas.TablePurchaseUpdate,
@@ -376,7 +376,7 @@ def create_res_purchase(
     db_reservation = crud.get_reservation(db, res_purchase.reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    db_item = crud.get_item(db, res_purchase.item_id)
+    db_item = crud.get_item(res_purchase.item_id, db)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return crud.create_res_purchase(db, res_purchase)
