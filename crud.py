@@ -689,6 +689,7 @@ def table_out(
     db_table.mastertable_id = None 
     db_table.group_id = None 
     db_table.user_id = None 
+    db_table.timer_started_at = None
 
     db.commit()
     return db_history
