@@ -584,6 +584,46 @@ def delete_res_purchase(
     db.commit()
     return db_res_purchase
 
+def reservation_check_in(
+        db: Session,
+        reservation_id: int
+):
+    db_reservation = get_reservation(db, reservation_id) # 유효성 체크는 메인에서
+    db_res_purchases = db.query(ReservationPurchase).filter(ReservationPurchase.reservation_id == reservation_id).all()
+    # 없으면 [] -> 아래의 For문은 돌지 않는다.
+
+    table_id = db_reservation.table_id # String
+    db_table = get_table(db, table_id) # Table 객체
+    if db_table is None:
+        return None
+    if db_table.status != "available": # 빈 테이블인지 체크
+        return "TABLE_NOT_AVAILABLE"
+
+    # TableMaster 변경: 1회
+    db_table.customer = db_reservation.customer_name
+    db_table.phonenumber = db_reservation.customer_phone
+    db_table.status = "inuse"
+    db_table.registered_at = datetime.now(UTC)
+    
+    # res_purchase 개수 (즉 품목 개수) 만큼 tablepurchase생성
+    for purchase in db_res_purchases:
+        db_purchase = TablePurchase(
+            table_id = table_id,
+            item_id = purchase.item_id,
+            item_name = purchase.item_name,
+            quantity = purchase.quantity,
+            unit_price = purchase.unit_price,
+            total_price = purchase.total_price,
+            created_at = datetime.now(UTC)
+        )
+        db.add(db_purchase)
+    db.flush()
+    recalculate_table_total_price(db, table_id)
+    db.commit()
+    db.refresh(db_table)
+    return db_table
+
+
 # ========================
 # TableOut
 # ========================
