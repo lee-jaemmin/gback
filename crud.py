@@ -427,7 +427,6 @@ def create_reservation(
 ): 
     db_reservation = Reservation (
         reservation_time = reservation.reservation_time,
-        reservation_price = reservation.reservation_price,
         customer_name = reservation.customer_name,
         customer_phone = reservation.customer_phone,
         table_id = reservation.table_id,
