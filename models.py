@@ -42,7 +42,7 @@ class User(Base):
     username = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, default="user", nullable=False)
-    fcmtoken = Column(String, nullable=False)
+    fcmtoken = Column(String, nullable=True)
 
     tablecardfields = Column(
         JSON,
