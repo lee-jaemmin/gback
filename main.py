@@ -286,7 +286,7 @@ def read_purchase(
         raise HTTPException(status_code=404, detail="Purchase not found")
     return db_purchase
 
-@app.get("/tables/{tables_id}/purchases", response_model=list[schemas.TablePurchaseResponse])
+@app.get("/tables/{table_id}/purchases", response_model=list[schemas.TablePurchaseResponse])
 def read_purchases_by_table (
     table_id: str,
     db: Session = Depends(get_db)
