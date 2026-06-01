@@ -141,6 +141,7 @@ def create_table(db: Session, table: TableCreate):
         total_price = table.total_price,
         company_id = table.company_id,
         user_id = table.user_id,
+        user_name = table.user_name,
         group_id = table.group_id,
     )
 
