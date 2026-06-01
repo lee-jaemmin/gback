@@ -84,6 +84,7 @@ class TableMaster(Base):
 
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    user_name = Column(String, ForeignKey("users.id"), nullable=True)
     group_id = Column(String, ForeignKey("table_groups.id"), nullable=True)
 
     company = relationship("Company", back_populates="tables")
@@ -253,6 +254,7 @@ class TableHistory(Base):
     remark = Column(Text, default="", nullable=False)
 
     user_id = Column(String, default="", nullable=False)
+    user_name = Column(String, default="", nullable=False)
     company_id = Column(String, nullable=False)
 
     registered_at = Column(DateTime(timezone=True), nullable=True)

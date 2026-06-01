@@ -208,6 +208,9 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
     if table_update.user_id is not None:
         db_table.user_id = table_update.user_id
 
+    if table_update.user_name is not None:
+        db_table.user_name = table_update.user_name
+
     if table_update.group_id is not None:
         db_table.group_id = table_update.group_id
 
@@ -650,6 +653,7 @@ def table_out(
         persons = db_table.persons,
         remark = db_table.remark,
         user_id = db_table.user_id,
+        user_name = db_table.user_name,
         company_id = db_table.company_id,
         registered_at = db_table.registered_at,
         out_at = datetime.now(UTC)
@@ -689,6 +693,7 @@ def table_out(
     db_table.mastertable_id = None 
     db_table.group_id = None 
     db_table.user_id = None 
+    db_table.user_name = None
     db_table.timer_started_at = None
 
     db.commit()

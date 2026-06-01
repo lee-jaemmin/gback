@@ -109,6 +109,7 @@ class TableUpdate(BaseModel):
     registered_at: Optional[datetime] = None
 
     user_id: Optional[str] = None
+    user_name: Optional[str] = None
     group_id: Optional[str] = None
 
     ismaster: Optional[bool] = None
@@ -119,6 +120,7 @@ class TableResponse(TableBase):
     id: str
     company_id: str
     user_id: Optional[str] = None
+    user_name: Optional[str] = None
     group_id: Optional[str] = None
 
     created_at: datetime
@@ -334,6 +336,7 @@ class TableHistoryBase(BaseModel):
     remark: str = ""
 
     user_id: str = ""
+    user_name: str = ""
     company_id: str
 
     registered_at: Optional[datetime] = None
