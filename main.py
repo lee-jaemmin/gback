@@ -118,8 +118,6 @@ def create_table(
         raise HTTPException(status_code=400, detail="Table alreay exists")
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
     return crud.create_table(db, table)
 
 @app.get("/tables/{table_id}", response_model=schemas.TableResponse)
