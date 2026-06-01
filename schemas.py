@@ -82,7 +82,7 @@ class TableBase(BaseModel):
 
     total_price: int = 0
     registered_at: Optional[datetime] = None
-    timer_started_at = Optional[datetime] = None
+    timer_started_at: Optional[datetime] = None
 
     ismaster: bool = False
     mastertable_id: Optional[str] = None
