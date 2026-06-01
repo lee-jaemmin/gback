@@ -92,6 +92,7 @@ class TableCreate(TableBase):
     id: str
     company_id: str
     user_id: Optional[str] = None
+    user_name: Optional[str] = None
     group_id: Optional[str] = None
 
 
