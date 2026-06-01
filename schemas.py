@@ -344,7 +344,7 @@ class TableHistoryCreate(TableHistoryBase):
     pass
 
 
-class TableHistoryResponse(BaseModel):
+class TableHistoryResponse(TableHistoryBase):
     id: int
     created_at: datetime
 
