@@ -84,7 +84,7 @@ class TableMaster(Base):
 
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
-    user_name = Column(String, ForeignKey("users.id"), nullable=True)
+    user_name = Column(String, nullable=True)
     group_id = Column(String, ForeignKey("table_groups.id"), nullable=True)
 
     company = relationship("Company", back_populates="tables")
