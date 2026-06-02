@@ -223,9 +223,8 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
     if table_update.mastertable_id is not None:
         db_table.mastertable_id = table_update.mastertable_id
 
-        
-
-    
+    if table_update.timer_started_at is not None:
+        db_table.timer_started_at = table_update.timer_started_at    
 
     db.commit()
     db.refresh(db_table)

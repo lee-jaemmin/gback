@@ -115,6 +115,7 @@ class TableUpdate(BaseModel):
 
     ismaster: Optional[bool] = None
     mastertable_id: Optional[str] = None
+    timer_started_at: Optional[datetime] = None
 
 
 class TableResponse(TableBase):
