@@ -35,14 +35,14 @@ def seed():
         # -------------------------
         # User
         # -------------------------
-        user = db.query(User).filter(User.id == "user_1").first()
+        user = db.query(User).filter(User.id == "or0VV3Fx9pO4pvaygGKrgR36rpq1").first()
 
         if user is None:
             user = User(
-                id="user_1",
-                username="테스트직원",
-                email="test@test.com",
-                role="admin",
+                id="or0VV3Fx9pO4pvaygGKrgR36rpq1",
+                username="DEVACC",
+                email="devacc@naver.com",
+                role="owner",
                 fcmtoken=None,
                 tablecardfields=["purchases", "persons"],
                 company_id="company_1",
