@@ -24,7 +24,7 @@ class Company(Base):
 
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    invite_code = Column(String, nullable=False, unique=True)
+    invite_code = Column(String, unique=True, nullable=True, index=True)
     region = Column(String, nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
