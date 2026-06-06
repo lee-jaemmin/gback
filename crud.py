@@ -106,6 +106,18 @@ def regenerate_invite_code(db: Session, company_id: str):
     db.commit()
     db.refresh(db_company)
     return db_company
+
+def delete_table(
+        db: Session,
+        table_id: str,
+):
+    db_table = get_table(db, table_id)
+    if db_table is None:
+        return db_table
+    
+    db.delete(db_table)
+    db.commit()
+    return db_table # 방금 삭제된 객체 반환
     
 
 # ========================

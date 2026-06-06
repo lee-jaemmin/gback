@@ -175,6 +175,16 @@ def update_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
 
+@app.delete("tables/{tables_id}", response_model=schemas.TableResponse)
+def delete_table(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.delete_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    return db_table
+
 # =====================
 # Category API
 # =====================
