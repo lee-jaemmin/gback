@@ -273,11 +273,11 @@ def delete_table(
 ):
     db_table = get_table(db, table_id)
     if db_table is None:
-        return db_table
+        return False
     
     db.delete(db_table)
     db.commit()
-    return db_table # 방금 삭제된 객체 반환
+    return True # 방금 삭제된 객체 반환
 
 # ========================
 # ItemCategory
@@ -534,11 +534,11 @@ def delete_reservation(
 ):
     db_reservation = get_reservation(db, reservation_id)
     if db_reservation is None:
-        return db_reservation
+        return False
     
     db.delete(db_reservation)
     db.commit()
-    return db_reservation # 방금 삭제된 객체 반환
+    return True # 방금 삭제된 객체 반환
 
 # ========================
 # ReservationPurchase: table_id 접근 위해서는 Reservation을 거쳐야 함.
@@ -638,8 +638,10 @@ def delete_res_purchase(
     db.flush()
     if table_id is not None:
         recalculate_res_table_total_price(db, table_id)
+    else:
+        return False
     db.commit()
-    return db_res_purchase
+    return True
 
 def reservation_check_in(
         db: Session,

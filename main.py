@@ -181,9 +181,9 @@ def delete_table(
     db: Session = Depends(get_db)
 ):
     db_table = crud.delete_table(db, table_id)
-    if db_table is None:
+    if db_table is False:
         raise HTTPException(status_code=404, detail="Table not found")
-    return db_table
+    return {"message": "Table deleted successfully"}
 
 # =====================
 # Category API
@@ -383,10 +383,10 @@ def delete_reservation(
 ):
     db_reservation = crud.delete_reservation(db, reservation_id)
 
-    if db_reservation is None:
+    if db_reservation is False:
         raise HTTPException(status_code=404, detail="Reservation not found")
 
-    return db_reservation
+    return {"message": "Reservation deleted successfully"}
 
 # =====================
 # ReservationPurchase API
@@ -443,10 +443,10 @@ def delete_res_purchase(
 ):
     db_res_purchase = crud.delete_res_purchase(db, res_purchase_id)
 
-    if db_res_purchase is None:
+    if db_res_purchase is False:
         raise HTTPException(status_code=404, detail="ReservationPurchase not found")
 
-    return db_res_purchase
+    return {"message": "Reservation Purchase deleted successfully"}
 
 @app.post("/reservations/{reservation_id}/check-in", response_model=schemas.TableResponse)
 def reservation_check_in (
