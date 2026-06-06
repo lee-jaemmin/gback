@@ -20,11 +20,10 @@ def create_company(
     company: schemas.CompanyCreate, 
     db: Session = Depends(get_db),
     ):
-    db_company = crud.get_company(db, company.id)
-
-    if db_company is not None:
-        raise HTTPException(status_code=400, detail="Company already exists")
-    return crud.create_company(db, company)
+    try:
+        return crud.create_company(db, company)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @app.get("/companies/{company_id}", response_model=schemas.CompanyResponse)
@@ -70,7 +69,11 @@ def regenerate_invite_code (
     company_id: str,
     db: Session = Depends(get_db)
 ):
-    result = crud.regenerate_invite_code(db, company_id)
+    try:
+        result = crud.regenerate_invite_code(db, company_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     if result is None:
         raise HTTPException(status_code=404, detail="Company not found")
     
@@ -132,13 +135,9 @@ def create_table(
     table: schemas.TableCreate,
     db: Session = Depends(get_db)
 ):
-    db_table = crud.get_table(db, table.id)
     db_company = crud.get_company(db, table.company_id)
-    db_user = crud.get_user(db, table.user_id)
     # db_group = crud.get_gr
 
-    if db_table is not None:
-        raise HTTPException(status_code=400, detail="Table alreay exists")
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return crud.create_table(db, table)
@@ -528,4 +527,3 @@ def read_history_purchases_by_history(
     if db_history is None:
         raise HTTPException(status_code=404, detail="History not found")
     return crud.get_history_purchases_by_history(db ,history_id)
-
