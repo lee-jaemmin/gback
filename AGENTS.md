@@ -25,6 +25,7 @@ For detailed context, read only when needed:
 - Do not change Firebase rules, indexes, schema, or production data behavior without warning.
 - Do not remove logs, analytics, error handling, or null-safety checks unless clearly obsolete.
 - When uncertain, add a short TODO or ask before making risky assumptions.
+- Do not make cosmetic-only changes unless explicitly requested. (adding lines, comma etc)
 
 ## Flutter rules
 
