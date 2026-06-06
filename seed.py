@@ -22,6 +22,8 @@ def seed():
         # -------------------------
         # Company
         # -------------------------
+        # Seed uses fixed ids for local test convenience.
+        # Real create endpoints generate Company.id and invite_code on the server.
         company = db.query(Company).filter(Company.id == "company_1").first()
 
         if company is None:
@@ -29,7 +31,7 @@ def seed():
                 id="company_1",
                 name="테스트매장",
                 region="이태원",
-                invite_code = "GRID01"
+                invite_code="GRID01",
             )
             db.add(company)
 
@@ -53,6 +55,8 @@ def seed():
         # -------------------------
         # Tables
         # -------------------------
+        # Seed keeps stable table ids, but real create endpoints generate
+        # TableMaster.id as an internal UUID and keep tablename as the visible name.
         table_names = [
             ("A1", "A"),
             ("A2", "A"),
