@@ -92,7 +92,7 @@ def generate_invitation_code(db: Session):
         if existing_company is None:
             return code
 
-    raise RuntimeError("Failed to generate invitation code")
+    raise Exception("Failed to generate invitation code")
 
 def regenerate_invite_code(db: Session, company_id: str):
     db_company = get_company(db, company_id)
