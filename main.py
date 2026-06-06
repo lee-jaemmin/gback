@@ -491,6 +491,10 @@ def read_histories_by_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return crud.get_histories_by_table(db, table_id)
     
+# =====================
+# HistoryPurchase API
+# =====================
+
 @app.get("/history-purchases/{history_purchase_id}", response_model=schemas.TableHistoryPurchaseResponse)
 def read_history_purchase(
     history_purchase_id: int,
