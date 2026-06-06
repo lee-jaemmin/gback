@@ -20,10 +20,7 @@ def create_company(
     company: schemas.CompanyCreate, 
     db: Session = Depends(get_db),
     ):
-    try:
-        return crud.create_company(db, company)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return crud.create_company(db, company)
 
 
 @app.get("/companies/{company_id}", response_model=schemas.CompanyResponse)
@@ -69,11 +66,7 @@ def regenerate_invite_code (
     company_id: str,
     db: Session = Depends(get_db)
 ):
-    try:
-        result = crud.regenerate_invite_code(db, company_id)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
+    result = crud.regenerate_invite_code(db, company_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Company not found")
     
