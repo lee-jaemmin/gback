@@ -12,6 +12,7 @@ from datetime import datetime
 class CompanyBase(BaseModel):
     name: str
     region: str
+    
 
 class CompanyCreate(CompanyBase):
     pass
@@ -20,10 +21,12 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
     region: Optional[str] = None
+    sections: Optional[list[str]] = None
 
 class CompanyResponse(CompanyBase):
     id: str
     created_at: datetime
+    sections: list[str]
     updated_at: datetime
     invite_code: Optional[str] = None
 

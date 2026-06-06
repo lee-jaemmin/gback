@@ -32,6 +32,7 @@ def seed():
                 name="테스트매장",
                 region="이태원",
                 invite_code="GRID01",
+                sections = ['A', 'B', 'C', 'D', 'E']
             )
             db.add(company)
 
