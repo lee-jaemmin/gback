@@ -14,7 +14,7 @@ class CompanyBase(BaseModel):
     region: str
 
 class CompanyCreate(CompanyBase):
-    id: str
+    pass
 
 
 class CompanyUpdate(BaseModel):
@@ -25,7 +25,7 @@ class CompanyResponse(CompanyBase):
     id: str
     created_at: datetime
     updated_at: datetime
-    invite_code: str
+    invite_code: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -44,6 +44,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    # User.id is the Firebase Auth UID, not a server-generated UUID.
     id: str
     company_id: str
 
@@ -88,7 +89,6 @@ class TableBase(BaseModel):
 
 
 class TableCreate(TableBase):
-    id: str
     company_id: str
     user_id: Optional[str] = None
     user_name: Optional[str] = None
