@@ -11,6 +11,7 @@ from schemas import (
 from typing import Optional
 from datetime import datetime, UTC
 import random
+import uuid
 
 def recalculate_table_total_price(db: Session, table_id: str):
     db_table = get_table(db, table_id)
@@ -40,10 +41,13 @@ def recalculate_res_table_total_price(db: Session, table_id: str):
 # Company
 # ========================
 def create_company(db: Session, company: CompanyCreate):
+    invite_code = generate_invitation_code(db)
+
     db_company = Company(
-        id=company.id,
+        id=str(uuid.uuid4()),
         name=company.name,
         region=company.region,
+        invite_code=invite_code,
     )
 
     db.add(db_company)
@@ -78,27 +82,24 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
 def get_company_by_invite_code(db: Session, invite_code: str):
     return db.query(Company).filter(Company.invite_code == invite_code).first()
 
+def generate_invitation_code(db: Session):
+    invite_code_chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+    for _ in range(20):
+        code = "".join(random.choice(invite_code_chars) for _ in range(6))
+
+        existing_company = get_company_by_invite_code(db, code)
+        if existing_company is None:
+            return code
+
+    raise RuntimeError("Failed to generate invitation code")
+
 def regenerate_invite_code(db: Session, company_id: str):
     db_company = get_company(db, company_id)
     if db_company is None:
         return None
-    INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    new_code = None
-    for _ in range(20): # 최대 횟수 20회
-        code = ""    
-        for _ in range(6): 
-            code += random.choice(INVITE_CODE_CHARS)
 
-        existing_company = get_company_by_invite_code(db, code)
-        if existing_company is None:
-            new_code = code
-            break
-            
-    if new_code is None:
-        raise Exception ('Failed to regenerate new code')
-    # crud에서 예외 처리하면 main에서는 안 다뤄도 됨.
-
-    db_company.invite_code = new_code
+    db_company.invite_code = generate_invitation_code(db)
     db.commit()
     db.refresh(db_company)
     return db_company
@@ -160,7 +161,7 @@ def update_user(db: Session, user_id:str, user_update: UserUpdate):
 # ========================
 def create_table(db: Session, table: TableCreate):
     db_table = TableMaster(
-        id = table.id,
+        id = str(uuid.uuid4()),
         tablename = table.tablename,
         section = table.section,
         status = table.status,
@@ -768,4 +769,3 @@ def get_history_purchases_by_history(
         history_id: int
 ):
     return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.history_id == history_id).all()
-
