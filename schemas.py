@@ -13,7 +13,6 @@ class CompanyBase(BaseModel):
     name: str
     region: str
 
-
 class CompanyCreate(CompanyBase):
     id: str
 
@@ -22,11 +21,11 @@ class CompanyUpdate(BaseModel):
     name: Optional[str] = None
     region: Optional[str] = None
 
-
 class CompanyResponse(CompanyBase):
     id: str
     created_at: datetime
     updated_at: datetime
+    invite_code: str
 
     class Config:
         from_attributes = True

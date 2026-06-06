@@ -10,6 +10,7 @@ from schemas import (
         )
 from typing import Optional
 from datetime import datetime, UTC
+import random
 
 def recalculate_table_total_price(db: Session, table_id: str):
     db_table = get_table(db, table_id)
@@ -73,6 +74,35 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     db.refresh(db_company)
 
     return db_company
+
+def get_company_by_invite_code(db: Session, invite_code: str):
+    return db.query(Company).filter(Company.invite_code == invite_code).first()
+
+def regenerate_invite_code(db: Session, company_id: str):
+    db_company = get_company(db, company_id)
+    if db_company is None:
+        return None
+    INVITE_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    new_code = None
+    for _ in range(20): # 최대 횟수 20회
+        code = ""    
+        for _ in range(6): 
+            code += random.choice(INVITE_CODE_CHARS)
+
+        existing_company = get_company_by_invite_code(db, code)
+        if existing_company is None:
+            new_code = code
+            break
+            
+    if new_code is None:
+        raise Exception ('Failed to regenerate new code')
+    # crud에서 예외 처리하면 main에서는 안 다뤄도 됨.
+
+    db_company.invite_code = new_code
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+    
 
 # ========================
 # User
@@ -313,6 +343,7 @@ def get_items_by_category(db: Session, category_id: int, company_region: Optiona
     return query.all()
 ## Item에는 region이 없고 Company에 있음. 그래서 join이 필요
 ## 조인 할 수도 있고, 안 할 수 있을 때
+
 
 def get_items_by_company_and_category(
     company_id: str,

@@ -55,6 +55,29 @@ def update_company(
         raise HTTPException(status_code=404, detail="Company not found")
     return db_company
 
+@app.get("/companies/invite-code/{invite_code}", response_model=schemas.CompanyResponse)
+def read_company_by_invite_code(
+    invite_code: str,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company_by_invite_code(db, invite_code)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return db_company
+
+@app.patch("/companies/{company_id}/regenerate-invite-code", response_model=schemas.CompanyResponse)
+def regenerate_invite_code (
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    result = crud.regenerate_invite_code(db, company_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    return result
+    
+
+
 # =====================
 # User API
 # =====================
