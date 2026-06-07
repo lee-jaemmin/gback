@@ -277,7 +277,7 @@ def delete_table(
     
     db.delete(db_table)
     db.commit()
-    return True # 방금 삭제된 객체 반환
+    return True
 
 # ========================
 # ItemCategory
