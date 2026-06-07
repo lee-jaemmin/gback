@@ -175,7 +175,7 @@ def update_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
 
-@app.delete("/tables/{table_id}", response_model=schemas.TableResponse)
+@app.delete("/tables/{table_id}")
 def delete_table(
     table_id: str,
     db: Session = Depends(get_db)
