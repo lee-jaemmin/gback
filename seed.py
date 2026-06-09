@@ -95,28 +95,25 @@ def seed():
         # -------------------------
         # ItemCategory
         # -------------------------
-        category = (
-            db.query(ItemCategory)
-            .filter(ItemCategory.category_name == "위스키")
-            .first()
-        )
+        categories = [
+            ("위스키", 1),
+            ("데킬라", 2),
+            ("샴페인", 3),
+        ]
 
-        if category is None:
-            category = ItemCategory(
-                category_name="위스키",
-                sort_order=1,
-                is_active=True,
+        for category_name, sort_order in categories:
+            existing_category = (
+                db.query(ItemCategory)
+                .filter(ItemCategory.category_name == category_name)
+                .first()
             )
-            category = ItemCategory(
-                category_name="데킬라",
-                sort_order=2,
-                is_active=True,
-            )
-            category = ItemCategory(
-                category_name="샴페인",
-                sort_order=3,
-                is_active=True,
-            )
+
+            if existing_category is None:
+                category = ItemCategory(
+                    category_name=category_name,
+                    sort_order=sort_order,
+                    is_active=True,
+                )
             db.add(category)
             db.flush()
 
@@ -147,7 +144,7 @@ def seed():
                     item_price=item_price,
                     is_active=True,
                     company_id="company_1",
-                    category_id=category.id,
+                    category_id=item_category,
                 )
                 db.add(item)
 
