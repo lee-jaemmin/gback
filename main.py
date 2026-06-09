@@ -345,7 +345,7 @@ def create_purchase_log(
     #FK check
     db_table = crud.get_table(db, log.table_id)
     db_item = crud.get_item(log.item_id, db)
-    db_user = crud.get_user(log.user_id)
+    db_user = crud.get_user(db, log.user_id)
 
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
