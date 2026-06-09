@@ -257,10 +257,8 @@ class TablePurchaseLogResponse(BaseModel):
     total_price: int
 
     user_id: str
-    user_name: str
 
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True        
