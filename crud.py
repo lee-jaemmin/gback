@@ -793,6 +793,10 @@ def table_out(
     # 만약 아웃된 애가 마스터라면
     ## 테이블 그룹 crud를 만들기 ## 
 
+    db_log = get_purchase_logs(db, table_id)
+    for log in db_log:
+        db.delete(log)
+
     # 테이블 초기화
     db_table.status = 'available'
     db_table.customer = ""
