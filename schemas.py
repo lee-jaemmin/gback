@@ -237,7 +237,6 @@ class TablePurchaseLogCreate(BaseModel):
     item_id: int
     quantity: int = 1
     user_id: str
-    user_name: str
 
 class TablePurchaseLogUpdate(BaseModel):
     item_id: int

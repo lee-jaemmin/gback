@@ -486,6 +486,9 @@ def create_purchase_log(
     db_item = get_item(log.item_id, db)
     if db_item is None:
         return None
+    db_user = get_user(db, log.user_id)
+    if db_user is None:
+        return None
 
     db_log = TablePurchaseLog (
         table_id = log.table_id,
@@ -495,7 +498,7 @@ def create_purchase_log(
         unit_price = db_item.item_price,
         total_price = db_item.item_price * log.quantity,
         user_id = log.user_id,
-        user_name = log.user_name,
+        user_name = db_user.username,
     )
 
     db.add(db_log)
