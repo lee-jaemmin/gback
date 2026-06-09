@@ -406,7 +406,7 @@ def create_purchase(
     db_item = get_item(purchase.item_id, db) # 이번에 주문한 아이템.
 
     existing_purchase = (
-        db.query(TablePurchase).filter( # 어느 테이블 뒤질지 먼저
+        db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인.
             TablePurchase.table_id == purchase.table_id,
             TablePurchase.item_id == purchase.item_id).first()
         )
