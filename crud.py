@@ -1,12 +1,12 @@
 from sqlalchemy.orm import Session
 from models import ( 
             Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
-            TableHistory, TableHistoryPurchase
+            TableHistory, TableHistoryPurchase, TablePurchaseLog,
         )
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
-            ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate,
+            ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, TablePurchaseLogUpdate,
         )
 from typing import Optional
 from datetime import datetime, UTC
@@ -474,6 +474,62 @@ def update_purchase(
     db.commit()
     db.refresh(db_purchase)
     return db_purchase
+
+# ========================
+# TablePurchaseLog
+# ========================
+
+def create_purchase_log(
+        db: Session,
+        log: TablePurchaseLogCreate
+) :
+    db_item = get_item(log.item_id, db)
+    if db_item is None:
+        return None
+
+    db_log = TablePurchaseLog (
+        table_id = log.table_id,
+        item_id = db_item.id,
+        item_name = db_item.item_name,
+        quantity = log.quantity,
+        unit_price = db_item.item_price,
+        total_price = db_item.item_price * log.quantity,
+        user_id = log.user_id,
+        user_name = log.user_name,
+    )
+
+    db.add(db_log)
+    db.commit()
+    db.refresh(db_log)
+    return db_log
+
+def get_purchase_logs(
+        db: Session,
+        table_id: str
+) :
+    return db.query(TablePurchaseLog).filter(TablePurchaseLog.table_id == table_id).all()
+
+# def update_log(
+#         db: Session,
+#         log_id :int,
+#         log_update: TablePurchaseLogUpdate,
+# ):
+#     db_log = get_purchase_log(db, log_id)
+
+#     if log_update.item_id is not None:
+#         db_log.item_id = log_update.item_id
+#     if log_update.item_name is not None:
+#         db_log.item_name = log_update.item_name
+#     if log_update.quantity is not None:
+#         db_log.quantity = log_update.quantity
+#     if log_update.unit_price is not None:
+#         db_log.unit_price = log_update.unit_price
+#     if log_update.total_price is not None:
+#         db_log.total_price = log_update.total_price
+    
+#     db.commit()
+#     db.refresh(db_log)
+#     return db_log
 
 # ========================
 # Reservation

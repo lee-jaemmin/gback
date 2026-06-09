@@ -227,6 +227,45 @@ class TablePurchaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# =========================
+# TablePurchaseLog
+# 현재 테이블에서 실제 주문한 상품
+# =========================
+
+class TablePurchaseLogCreate(BaseModel):
+    table_id: str
+    item_id: int
+    quantity: int = 1
+    user_id: str
+    user_name: str
+
+class TablePurchaseLogUpdate(BaseModel):
+    item_id: int
+    item_name: Optional[str] = None
+    quantity: Optional[int] = None
+    unit_price: Optional[int] = None
+    total_price: Optional[int] = None
+
+
+class TablePurchaseLogResponse(BaseModel):
+    id: int
+    table_id: str
+    item_id: int
+
+    item_name: str
+    quantity: int
+    unit_price: int
+    total_price: int
+
+    user_id: str
+    user_name: str
+
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True        
+
 
 # =========================
 # Reservation

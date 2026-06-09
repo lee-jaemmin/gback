@@ -335,6 +335,40 @@ def update_purchase(
     return crud.update_purchase(db, purchase_id, purchase_update)
 
 # =====================
+# TablePurchaseLog API
+# =====================
+@app.post("/purchase-log", response_model=schemas.TablePurchaseLogResponse)
+def create_purchase_log(
+    log: schemas.TablePurchaseLogCreate,
+    db: Session = Depends(get_db)
+):
+    #FK check
+    db_table = crud.get_table(db, log.table_id)
+    db_item = crud.get_item(log.item_id, db)
+    db_user = crud.get_user(log.user_id)
+
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return crud.create_purchase_log(db, log)
+
+@app.get("/tables/{table_id}/purchase-logs/", response_model=list[schemas.TablePurchaseLogResponse])
+def read_purchase_log(
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    db_log = crud.get_purchase_logs(db, table_id)
+    return db_log # 비었으면 []
+
+
+# =====================
 # Reservation API
 # =====================
 @app.post("/reservations", response_model=schemas.ReservationResponse)

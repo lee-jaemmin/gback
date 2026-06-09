@@ -195,6 +195,26 @@ class TablePurchase(Base):
 
     table = relationship("TableMaster", back_populates="purchases")
     item = relationship("Item", back_populates="table_purchases")
+    
+class TablePurchaseLog(Base):
+    __tablename__ = "table_purchases_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+
+    item_name = Column(String, nullable=False)
+    quantity = Column(Integer, default=1, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    user_name = Column(String, nullable=True)
+    unit_price = Column(Integer, default=0, nullable=False)
+    total_price = Column(Integer, default=0, nullable=False)
+
+      
+
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    
 
 
 class Reservation(Base):
