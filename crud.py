@@ -223,8 +223,8 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
 
     if table_update.status is not None:
         db_table.status = table_update.status # 등록 밖에 없음.
-        if db_table.status == 'inuse':
-            db_table.registered_at = datetime.now(UTC)
+        # if db_table.status == 'inuse':
+        #     db_table.registered_at = datetime.now(UTC)
 
     if table_update.customer is not None:
         db_table.customer = table_update.customer
@@ -464,6 +464,8 @@ def update_purchase(
         db_purchase.item_name = purchase_update.item_name
     if purchase_update.quantity is not None:
         db_purchase.quantity = purchase_update.quantity
+    if purchase_update.table_id is not None:
+        db_purchase.table_id = purchase_update.table_id
     if purchase_update.unit_price is not None:
         db_purchase.unit_price = purchase_update.unit_price
     # 품목별 총 가격 다시 계산

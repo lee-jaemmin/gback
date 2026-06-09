@@ -205,6 +205,7 @@ class TablePurchaseCreate(BaseModel):
 
 
 class TablePurchaseUpdate(BaseModel):
+    table_id: Optional[str] = None
     item_name: Optional[str] = None
     quantity: Optional[int] = None
     unit_price: Optional[int] = None
@@ -240,6 +241,7 @@ class TablePurchaseLogCreate(BaseModel):
     batch_id: str
 
 class TablePurchaseLogUpdate(BaseModel):
+    table_id: Optional[str] = None
     item_id: int
     item_name: Optional[str] = None
     quantity: Optional[int] = None
