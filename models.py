@@ -203,8 +203,9 @@ class TablePurchaseLog(Base):
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-
-    item_name = Column(String, nullable=False)
+    
+    batch_id = Column(String, nullable=False)
+    item_name = Column(String, nullable=False, index=True)
     quantity = Column(Integer, default=1, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     user_name = Column(String, nullable=True)

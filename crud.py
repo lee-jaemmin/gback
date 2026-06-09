@@ -499,6 +499,7 @@ def create_purchase_log(
         total_price = db_item.item_price * log.quantity,
         user_id = log.user_id,
         user_name = db_user.username,
+        batch_id = log.batch_id,
     )
 
     db.add(db_log)
