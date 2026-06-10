@@ -356,7 +356,7 @@ def create_purchase_log(
     
     return crud.create_purchase_log(db, log)
 
-@app.get("/tables/{table_id}/purchase-logs/", response_model=list[schemas.TablePurchaseLogResponse])
+@app.get("/tables/{table_id}/purchase-logs", response_model=list[schemas.TablePurchaseLogResponse])
 def read_purchase_log(
     table_id: str,
     db: Session = Depends(get_db)
