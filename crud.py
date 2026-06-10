@@ -515,27 +515,16 @@ def get_purchase_logs(
 ) :
     return db.query(TablePurchaseLog).filter(TablePurchaseLog.table_id == table_id).all()
 
-# def update_log(
-#         db: Session,
-#         log_id :int,
-#         log_update: TablePurchaseLogUpdate,
-# ):
-#     db_log = get_purchase_log(db, log_id)
-
-#     if log_update.item_id is not None:
-#         db_log.item_id = log_update.item_id
-#     if log_update.item_name is not None:
-#         db_log.item_name = log_update.item_name
-#     if log_update.quantity is not None:
-#         db_log.quantity = log_update.quantity
-#     if log_update.unit_price is not None:
-#         db_log.unit_price = log_update.unit_price
-#     if log_update.total_price is not None:
-#         db_log.total_price = log_update.total_price
+def delete_logs(
+        db: Session,
+        table_id :str,
+):
+    db_logs = get_purchase_logs(db, table_id)
+    for log in db_logs:
+        db.delete(log)
     
-#     db.commit()
-#     db.refresh(db_log)
-#     return db_log
+    db.commit()
+    return True
 
 # ========================
 # Reservation

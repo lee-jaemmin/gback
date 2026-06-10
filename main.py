@@ -367,6 +367,18 @@ def read_purchase_log(
     db_log = crud.get_purchase_logs(db, table_id)
     return db_log # 비었으면 []
 
+@app.delete("/tables/{table_id}/purchase-logs")
+def delete_logs (
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    db_logs = crud.delete_logs(db, table_id)
+    if db_logs is True:
+        return {"message": "Delete Logs Successfully"}
 
 # =====================
 # Reservation API
@@ -410,7 +422,7 @@ def update_reservation(
         raise HTTPException(status_code=404, detail="Reservaion not found")
     return crud.update_reservation(db, reservation_update, reservation_id)
 
-@app.delete("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
+@app.delete("/reservations/{reservation_id}")
 def delete_reservation(
     reservation_id: int,
     db: Session = Depends(get_db),
@@ -470,7 +482,7 @@ def update_res_purchase(
     
     return crud.update_res_purchase(db, res_purchase_id, res_purchase_update)
 
-@app.delete("/res-purchases/{res_purchase_id}", response_model=schemas.ReservationPurchaseResponse)
+@app.delete("/res-purchases/{res_purchase_id}")
 def delete_res_purchase(
     res_purchase_id: int,
     db: Session = Depends(get_db),
