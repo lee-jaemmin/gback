@@ -927,7 +927,6 @@ def reregister_table(
         db: Session,
         history_id: int,
         table_id: str,
-        user_id: str,
 ) : 
     db_history = get_history(db, history_id)
     if db_history is None:
@@ -948,7 +947,7 @@ def reregister_table(
     db_table.customer = db_history.customer_name
     db_table.persons = db_history.persons
     db_table.phonenumber = db_history.customer_phone
-    db_table.remark = db_history.remark
+    db_table.remark = f"{db_history.tablename}번 재등록" if not db_history.remark else f"{db_history.remark}, {db_history.tablename}번 재등록" 
     db_table.status = "inuse"
     db_table.registered_at = db_history.registered_at
     # 구매 정보 옮기기

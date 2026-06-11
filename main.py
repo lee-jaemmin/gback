@@ -616,7 +616,7 @@ def reregister_history(
     history_id: int,
     db: Session = Depends(get_db)
 ) : 
-    result = crud.reregister_table(db, history_id, table_id, user_id)
+    result = crud.reregister_table(db, history_id, table_id)
     if result == "History not found":
         raise HTTPException(status_code=404, detail="History not found")
     if result == "No historypurchase found":
@@ -627,4 +627,4 @@ def reregister_history(
         raise HTTPException(status_code=409, detail="Table already in use")
     if result is True:
         return {"message": "ReRegistered successfully"}
-    raise HTTPException(status_code=500, detail="Internal Server Error")
+    raise HTTPException(status_code=500, detail=f"Error: {result}")
