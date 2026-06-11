@@ -815,7 +815,7 @@ def reservation_check_in(
 
 
 # ========================
-# TableOut
+# TableOut, History
 # ========================
 def table_out(
         db: Session,
@@ -922,3 +922,51 @@ def get_history_purchases_by_history(
         history_id: int
 ):
     return db.query(TableHistoryPurchase).filter(TableHistoryPurchase.history_id == history_id).all()
+
+def reregister_table(
+        db: Session,
+        history_id: int,
+        table_id: str,
+        user_id: str,
+) : 
+    db_history = get_history(db, history_id)
+    if db_history is None:
+        return "History not found"
+    
+    db_history_purchases = get_history_purchases_by_history(db, history_id)
+    if not db_history_purchases:
+        return "No historypurchase found"   
+    
+    db_table = get_table(db, table_id)
+    if db_table is None:
+        return "Table not found"
+    
+    db_user = get_user(db, user_id)
+    if db_user is None:
+        return "User not found"
+    
+    if db_table.status == "inuse":
+        return "Table already in use"
+    
+    # 일반 정보 옮기기
+    db_table.customer = db_history.customer_name
+    db_table.persons = db_history.persons
+    db_table.phonenumber = db_history.customer_phone
+    db_table.remark = db_history.remark
+    db_table.status = "inuse"
+    db_table.registered_at = db_history.registered_at
+    # 구매 정보 옮기기
+    for hp in db_history_purchases:
+        db_purchase = TablePurchase(
+            table_id = db_table.id,
+            item_id = hp.item_id,
+            item_name = hp.item_name,
+            quantity = hp.quantity,
+            unit_price = hp.unit_price,
+            total_price = hp.quantity * hp.unit_price
+        )
+        db.add(db_purchase)
+    total_price = sum(hp.unit_price * hp.quantity for hp in db_history_purchases)
+    db_table.total_price = total_price
+    db.commit()
+    return True

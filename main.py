@@ -17,7 +17,7 @@ app = FastAPI()
 # =====================
 @app.post("/companies", response_model=schemas.CompanyResponse)
 def create_company(
-    company: schemas.CompanyCreate, 
+    company: schemas.CompanyCreate, # schema로 검사 진행 (클라이언트에서 데이터가 들어오거나 나갈 때) 입구 문지기 역할임.
     db: Session = Depends(get_db),
     ):
     return crud.create_company(db, company)
@@ -609,3 +609,24 @@ def read_history_purchases_by_history(
     if db_history is None:
         raise HTTPException(status_code=404, detail="History not found")
     return crud.get_history_purchases_by_history(db ,history_id)
+
+@app.post("/tables/{table_id}/re-register/histories/{history_id}") 
+def reregister_history(
+    table_id: str,
+    history_id: int,
+    db: Session = Depends(get_db)
+) : 
+    result = crud.reregister_table(db, history_id, table_id)
+    if result == "History not found":
+        raise HTTPException(status_code=404, detail="History not found")
+    if result == "No historypurchase found":
+        raise HTTPException(status_code=404, detail="No historypurchase found")
+    if result == "Table not found":
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "User not found":
+        raise HTTPException(status_code=404, detail="User not found")
+    if result == "Table already in use":
+        raise HTTPException(status_code=409, detail="Table already in use")
+    if result is True:
+        return {"message": "ReRegistered successfully"}
+    raise HTTPException(status_code=500, detail="Internal Server Error")
