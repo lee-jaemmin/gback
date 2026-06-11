@@ -4,6 +4,7 @@ from datetime import datetime
 
 # API 명세서
 # 요청 데이터는 ~~해야 한다. ex. id는 str이어야한다 등
+# 요청 데이터 -> python 객체
 
 # =========================
 # Company
