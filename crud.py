@@ -941,10 +941,6 @@ def reregister_table(
     if db_table is None:
         return "Table not found"
     
-    db_user = get_user(db, user_id)
-    if db_user is None:
-        return "User not found"
-    
     if db_table.status == "inuse":
         return "Table already in use"
     
