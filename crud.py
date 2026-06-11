@@ -672,6 +672,12 @@ def delete_reservation(
     if db_reservation is None:
         return False
     
+    db_table = get_table(db, db_reservation.table_id)
+    if db_table is None:
+        return False
+    
+    db_table.is_reserved = False
+    
     db.delete(db_reservation)
     db.commit()
     return True # 방금 삭제된 객체 반환
