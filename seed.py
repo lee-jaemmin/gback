@@ -89,6 +89,7 @@ def seed():
                     user_id=None,
                     user_name=None,
                     group_id=None,
+                    is_reserved=False,
                 )
                 db.add(table)
 

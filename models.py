@@ -80,6 +80,7 @@ class TableMaster(Base):
     ismaster = Column(Boolean, default=False, nullable=False)
     mastertable_id = Column(String, nullable=True)
     
+    is_reserved = Column(Boolean, default=False)
     timer_started_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)

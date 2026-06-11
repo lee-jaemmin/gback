@@ -89,6 +89,7 @@ class TableBase(BaseModel):
     timer_started_at: Optional[datetime] = None
 
     ismaster: bool = False
+    is_reserved: bool = False
     mastertable_id: Optional[str] = None
 
 
@@ -119,6 +120,7 @@ class TableUpdate(BaseModel):
     ismaster: Optional[bool] = None
     mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
+    is_reserved: Optional[bool] = None
 
 
 class TableResponse(TableBase):

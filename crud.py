@@ -612,7 +612,12 @@ def delete_logs_and_purchases(
 def create_reservation(
         db: Session,
         reservation: ReservationCreate
-): 
+):  
+    db_table = get_table(db, reservation.table_id)
+    if db_table is None:
+        return None
+    db_table.is_reserved = True
+    
     db_reservation = Reservation (
         reservation_time = reservation.reservation_time,
         customer_name = reservation.customer_name,
@@ -793,6 +798,7 @@ def reservation_check_in(
     db_table.customer = db_reservation.customer_name
     db_table.phonenumber = db_reservation.customer_phone
     db_table.status = "inuse"
+    db_table.is_reserved = False
     db_table.registered_at = datetime.now(UTC)
     
     # res_purchase 개수 (즉 품목 개수) 만큼 tablepurchase생성
