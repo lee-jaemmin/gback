@@ -614,7 +614,6 @@ def read_history_purchases_by_history(
 def reregister_history(
     table_id: str,
     history_id: int,
-    user_id: str,
     db: Session = Depends(get_db)
 ) : 
     result = crud.reregister_table(db, history_id, table_id, user_id)
