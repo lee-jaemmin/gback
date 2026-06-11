@@ -6,7 +6,7 @@ from models import (
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
-            ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, TablePurchaseLogUpdate,
+            ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, ReservationInputCreate,
         )
 from typing import Optional
 from datetime import datetime, UTC
@@ -784,6 +784,47 @@ def delete_res_purchase(
         return False
     db.commit()
     return True
+
+def register_reservation(
+        db: Session,
+        reservation_input: ReservationInputCreate,
+        table_id: str,
+) : 
+    db_table = get_table(db, table_id)
+    if db_table is None:
+        return "Table not found"
+    if db_table.is_reserved is True:
+        return "Table already reserved"
+    db_table.is_reserved = True
+    db_reservation = Reservation(
+        table_id = reservation_input.table_id,
+        reservation_time = reservation_input.reservation_time,
+        customer_name = reservation_input.customer_name,
+        customer_phone = reservation_input.customer_phone
+    )
+    db.add(db_reservation)
+    db.flush()
+
+    # 예약 하나에 여러 예약 내역이 가능하므로 id도 for문 안에서
+    for purchase in reservation_input.purchases:
+        db_item = get_item(purchase.item_id, db)
+        if db_item is None:
+            db.rollback() # 앞에 해둔 게 있기 때문에 롤백
+            return "Item not found"
+        now = datetime.now(UTC)    
+        db_res_purchase = ReservationPurchase (
+            reservation_id = db_reservation.id,
+            item_id = purchase.item_id,
+            item_name = db_item.item_name,
+            unit_price = db_item.item_price,
+            quantity = purchase.quantity,       
+            total_price = db_item.item_price * purchase.quantity,
+            created_at = now     
+        )
+        db.add(db_res_purchase)
+
+    db.commit()
+    return db_reservation
 
 def reservation_check_in(
         db: Session,

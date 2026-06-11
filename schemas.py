@@ -276,7 +276,6 @@ class TablePurchaseLogResponse(BaseModel):
 
 class ReservationBase(BaseModel):
     reservation_time: datetime
-
     customer_name: str
     customer_phone: str = ""
 
@@ -335,6 +334,21 @@ class ReservationPurchaseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# =========================
+# ReservationInput
+# =========================
+
+class ReservationInputBase(BaseModel):
+    item_id: int
+    quantity: int = 1
+
+
+class ReservationInputCreate(BaseModel):
+    reservation_time: datetime
+    customer_name: str
+    customer_phone: str
+    purchases: list[ReservationInputBase] = []
 
 
 # =========================

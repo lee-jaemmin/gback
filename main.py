@@ -463,6 +463,22 @@ def delete_reservation(
 
     return {"message": "Reservation deleted successfully"}
 
+@app.post("/tables/{table_id}/register-reservation") 
+def register_reservation (
+    table_id: str,
+    register: schemas.ReservationInputCreate,
+    db: Session = Depends(get_db)
+) : 
+    result = crud.register_reservation(db, register, table_id)
+    if result == "Table not found":
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "Table already reserved":
+        raise HTTPException(status_code=409, detail="Table already reservedßß")
+    if result == "Item not found":
+        raise HTTPException(status_code=404, detail="Item not found")
+    return result
+    
+
 # =====================
 # ReservationPurchase API
 # =====================
