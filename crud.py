@@ -477,10 +477,20 @@ def update_purchase(
     db.refresh(db_purchase)
     return db_purchase
 
+def delete_purchase(
+        db: Session,
+        purchase_id: int,
+):
+    db_purchase = get_purchase(db, purchase_id)
+    if db_purchase is None:
+        return False
+    db.delete(db_purchase)
+    db.commit()
+    return True 
+
 # ========================
 # TablePurchaseLog
 # ========================
-
 def create_purchase_log(
         db: Session,
         log: TablePurchaseLogCreate
@@ -515,6 +525,12 @@ def get_purchase_logs(
 ) :
     return db.query(TablePurchaseLog).filter(TablePurchaseLog.table_id == table_id).all()
 
+def get_purchase_log(
+        db: Session,
+        log_id: int
+) :
+    return db.query(TablePurchaseLog).filter(TablePurchaseLog.id == log_id).first()
+
 def delete_logs(
         db: Session,
         table_id :str,
@@ -525,6 +541,70 @@ def delete_logs(
     
     db.commit()
     return True
+
+def delete_log(
+        db: Session,
+        log_id: int,
+):
+    db_log = get_purchase_log(db, log_id)
+    if db_log is None:
+        return False
+    db.delete(db_log)
+    db.commit()
+    return True
+
+def delete_logs_and_purchases(
+        db: Session,
+        log_id: int,
+):
+    db_log = get_purchase_log(db, log_id)
+    if db_log is None:
+        return "Log not found"
+    db_item = get_item(db_log.item_id, db)
+    if db_item is None:
+        return "Item not found"
+    db_purchases = get_purchases_by_table(db, db_log.table_id)
+    db_table = get_table(db, db_log.table_id)
+    if db_table is None:
+        return "Table not found"
+
+    flag = False
+
+    for purchase in db_purchases:
+        if purchase.item_id == db_log.item_id:
+            flag = True
+            purchase.quantity = purchase.quantity - db_log.quantity
+            if purchase.quantity <= 0:
+                db.delete(purchase)
+            else:
+                purchase.total_price = purchase.unit_price * purchase.quantity
+    if flag is False:
+        return "Purchase not found"
+    
+    db.flush()
+    remaining_purchases = get_purchases_by_table(db, db_table.id)
+
+    total_price = sum(purchase.total_price for purchase in remaining_purchases)
+    db_table.total_price = total_price
+
+    db.delete(db_log)
+    db.commit()
+    return True
+    
+
+    # if update_log.table_id is not None:
+    #     db_log.table_id = update_log.table_id
+    # if update_log.item_id is not None:
+    #     db_log.item_id = update_log.item_id
+    # if update_log.item_name is not None:
+    #     db_log.item_name = update_log.item_name
+    # if update_log.quantity is not None:
+    #     db_log.quantity = update_log.quantity
+    # if update_log.unit_price is not None:
+    #     db_log.unit_price = update_log.unit_price
+    # if update_log.total_price is not None:
+    #     db_log.total_price = 
+
 
 # ========================
 # Reservation

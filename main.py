@@ -334,6 +334,17 @@ def update_purchase(
 
     return crud.update_purchase(db, purchase_id, purchase_update)
 
+@app.delete("/purchases/{purchase_id}")
+def delete_purchase (
+    purchase_id: int,
+    db: Session = Depends(get_db)
+) : 
+    result = crud.delete_purchase(db, purchase_id)
+    if result is True:
+        return {"message": "Deleted purchase successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    
 # =====================
 # TablePurchaseLog API
 # =====================
@@ -379,6 +390,24 @@ def delete_logs (
     db_logs = crud.delete_logs(db, table_id)
     if db_logs is True:
         return {"message": "Delete Logs Successfully"}
+    
+@app.delete("/purchase-logs/{log_id}")
+def delete_log_and_purchase (
+    log_id: int,
+    db: Session = Depends(get_db)
+):  
+    result = crud.delete_logs_and_purchases(db, log_id)
+    if result == "Log not found":
+        raise HTTPException(status_code=404, detail="Log not found")
+    if result == "Item not found":
+        raise HTTPException(status_code=404, detail="Item not found")
+    if result == "Table not found":
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "Purchase not found":
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    if result is True:
+        return {"message": "Deleted log and purchase successfully"}
+    raise HTTPException(status_code=500, detail="Failed to delete log and purchase")
 
 # =====================
 # Reservation API
