@@ -459,7 +459,7 @@ def delete_reservation(
     db_reservation = crud.delete_reservation(db, reservation_id)
 
     if db_reservation is False:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        raise HTTPException(status_code=404, detail="Reservation or Table not found")
 
     return {"message": "Reservation deleted successfully"}
 
