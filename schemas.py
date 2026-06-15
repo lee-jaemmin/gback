@@ -340,7 +340,7 @@ class ReservationPurchaseResponse(BaseModel):
 # =========================
 
 class ReservationInputBase(BaseModel):
-    item_id: int = ""
+    item_id: int = 0
     quantity: int = 1
 
 class ReservationInputCreate(ReservationInputBase):
