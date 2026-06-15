@@ -344,7 +344,7 @@ class ReservationInputBase(BaseModel):
     item_id: int
     quantity: int = 1
 
-class ReservationInputCreate(ReservationBase):
+class ReservationInputCreate(ReservationInputBase):
     reservation_time: datetime
     customer_name: str
     customer_phone: str
