@@ -861,6 +861,7 @@ def reservation_check_in(
             created_at = datetime.now(UTC)
         )
         db.add(db_purchase)
+    db.delete(db_reservation)
     db.flush()
     recalculate_table_total_price(db, table_id)
     db.commit()
