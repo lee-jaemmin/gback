@@ -340,11 +340,11 @@ class ReservationPurchaseResponse(BaseModel):
 # =========================
 
 class ReservationInputBase(BaseModel):
+    table_id: str
     item_id: int
     quantity: int = 1
 
-
-class ReservationInputCreate(BaseModel):
+class ReservationInputCreate(ReservationBase):
     reservation_time: datetime
     customer_name: str
     customer_phone: str
