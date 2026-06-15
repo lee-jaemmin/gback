@@ -729,12 +729,13 @@ def get_res_purchases_by_table (
 ):
     return db.query(ReservationPurchase).join(Reservation).filter(Reservation.table_id == table_id).all()
     ## 무조건 조인할 때는 이런 식으로
+    
 def get_res_purchases_by_reservation (
         db: Session,
         reservation_id: int,
 ):
     return db.query(ReservationPurchase).filter(ReservationPurchase.reservation_id == reservation_id).all()
-    ## 무조건 조인할 때는 이런 식으로
+    
 
 def update_res_purchase(
         db: Session,
