@@ -797,7 +797,7 @@ def register_reservation(
         return "Table already reserved"
     db_table.is_reserved = True
     db_reservation = Reservation(
-        table_id = reservation_input.table_id,
+        table_id = table_id,
         reservation_time = reservation_input.reservation_time,
         customer_name = reservation_input.customer_name,
         customer_phone = reservation_input.customer_phone
