@@ -824,6 +824,7 @@ def register_reservation(
         db.add(db_res_purchase)
 
     db.commit()
+    db.refresh(db_reservation)
     return db_reservation
 
 def reservation_check_in(
