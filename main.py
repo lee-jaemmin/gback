@@ -515,7 +515,7 @@ def read_res_purchases_by_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return crud.get_res_purchases_by_table(db, table_id)
 
-@app.patch("/res-purchases/{res_purchase_id}", response_model=schemas.ReservationPurchaseResponse)    
+ 
 def update_res_purchase(
     res_purchase_id: int,
     res_purchase_update: schemas.ReservationPurchaseUpdate,
