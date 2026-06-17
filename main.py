@@ -520,7 +520,7 @@ def read_res_purchases_by_reservation(
     reservation_id: int,
     db: Session = Depends(get_db)
 ):
-    db_reservation = crud.get_table(db, reservation_id)
+    db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
     return crud.get_res_purchases_by_reservation(db, reservation_id)
