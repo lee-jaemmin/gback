@@ -213,57 +213,11 @@ def get_tables_by_group(db: Session, group_id: str):
 def update_table(db: Session, table_update: TableUpdate, table_id: str):
     db_table = get_table(db, table_id)
 
-    if db_table is None:
-        return None
-    if table_update.tablename is not None:
-        db_table.tablename = table_update.tablename
+    update_data = table_update.model_dump(exclude_unset=True)
 
-    if table_update.section is not None:
-        db_table.section = table_update.section
-
-    if table_update.status is not None:
-        db_table.status = table_update.status # 등록 밖에 없음.
-        # if db_table.status == 'inuse':
-        #     db_table.registered_at = datetime.now(UTC)
-
-    if table_update.customer is not None:
-        db_table.customer = table_update.customer
-
-    if table_update.phonenumber is not None:
-        db_table.phonenumber = table_update.phonenumber
-
-    if table_update.persons is not None:
-        db_table.persons = table_update.persons
-
-    if table_update.remark is not None:
-        db_table.remark = table_update.remark
-
-    if table_update.total_price is not None:
-        db_table.total_price = table_update.total_price
-
-    if table_update.registered_at is not None:
-        db_table.registered_at = table_update.registered_at
-
-    if table_update.user_id is not None:
-        db_table.user_id = table_update.user_id
-
-    if table_update.user_name is not None:
-        db_table.user_name = table_update.user_name
-
-    if table_update.group_id is not None:
-        db_table.group_id = table_update.group_id
-
-    if table_update.ismaster is not None:
-        db_table.ismaster = table_update.ismaster
-
-    if table_update.mastertable_id is not None:
-        db_table.mastertable_id = table_update.mastertable_id
-
-    if table_update.timer_started_at is not None:
-        db_table.timer_started_at = table_update.timer_started_at    
-
-    if table_update.timer_end_at is not None:
-        db_table.timer_end_at = table_update.timer_end_at    
+    for key, value in update_data.items():
+        setattr(db_table, key, value)
+           
     db.commit()
     db.refresh(db_table)
 
