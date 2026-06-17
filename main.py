@@ -87,8 +87,6 @@ def create_user(
     db_company = crud.get_company(db, user.company_id)
     if db_user is not None:
         raise HTTPException(status_code=400, detail="User alreay exists")
-    if db_company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
     return crud.create_user(db, user)
 
 @app.get("/users/{user_id}", response_model=schemas.UserResponse)

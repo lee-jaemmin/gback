@@ -63,7 +63,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: str
-    company_id: str
+    company_id: Optional[str] = None
     created_at: datetime
 
     class Config:
