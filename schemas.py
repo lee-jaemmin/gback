@@ -50,7 +50,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     # User.id is the Firebase Auth UID, not a server-generated UUID.
     id: str
-    company_id: str
+    company_id: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -121,7 +121,7 @@ class TableUpdate(BaseModel):
     ismaster: Optional[bool] = None
     mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
-    timer_end_at: Optional[datetime] = None
+    timer_end_at: Optional[datetime] = None,
     is_reserved: Optional[bool] = None
 
 

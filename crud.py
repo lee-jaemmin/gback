@@ -116,7 +116,6 @@ def regenerate_invite_code(db: Session, company_id: str):
 def create_user(db: Session, user: UserCreate):
     db_user = User(
         id=user.id,
-        company_id=user.company_id,
         username=user.username,
         email=user.email,
         role=user.role,
@@ -217,7 +216,7 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
 
     for key, value in update_data.items():
         setattr(db_table, key, value)
-           
+
     db.commit()
     db.refresh(db_table)
 
