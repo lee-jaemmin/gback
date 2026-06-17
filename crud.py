@@ -51,6 +51,8 @@ def create_company(db: Session, company: CompanyCreate):
     )
 
     db.add(db_company)
+    db.flush()
+    create_tables_for_company(db, db_company.id)
     db.commit()
     db.refresh(db_company) # 여기서 created_at 등 자동 정보 생성
 
@@ -235,6 +237,35 @@ def delete_table(
     db.delete(db_table)
     db.commit()
     return True
+
+def create_tables_for_company(
+        db: Session,
+        company_id: str,
+) :
+    db_company = get_company(db, company_id) 
+    default_tables = []
+    sections = db_company.sections
+    for section in sections:
+        for number in range(10):
+            default_tables.append(
+                TableMaster(
+                    id = str(uuid.uuid4()),
+                    tablename = f"{section}-{number+1}",
+                    section = section,
+                    status = "available",
+                    customer = None,
+                    phonenumber = None,
+                    persons= 0,
+                    remark = None,
+                    total_price = 0,
+                    company_id = company_id,
+                    user_id = None,
+                    user_name = None,
+                    group_id = None,
+                )
+            )
+    db.add_all(default_tables)
+    return default_tables
 
 # ========================
 # ItemCategory
