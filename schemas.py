@@ -58,7 +58,8 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     fcmtoken: Optional[str] = None
-    tablecardfields: Optional[List[str]] = None
+    tablecardfields: Optional[List[str]] = None 
+    company_id: Optional[str] = None
 
 
 class UserResponse(UserBase):

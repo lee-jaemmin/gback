@@ -154,6 +154,8 @@ def update_user(db: Session, user_id:str, user_update: UserUpdate):
         db_user.fcmtoken = user_update.fcmtoken
     if user_update.tablecardfields is not None:
         db_user.tablecardfields = user_update.tablecardfields
+    if user_update.company_id is not None:
+        db_user.company_id = user_update.company_id
 
     db.commit()
     db.refresh(db_user)
