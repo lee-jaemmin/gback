@@ -262,6 +262,8 @@ def update_table(db: Session, table_update: TableUpdate, table_id: str):
     if table_update.timer_started_at is not None:
         db_table.timer_started_at = table_update.timer_started_at    
 
+    if table_update.timer_end_at is not None:
+        db_table.timer_end_at = table_update.timer_end_at    
     db.commit()
     db.refresh(db_table)
 
@@ -948,6 +950,8 @@ def table_out(
     db_table.user_id = None 
     db_table.user_name = None
     db_table.timer_started_at = None
+    db_table.timer_end_at = None
+    
 
     db.commit()
     return db_history

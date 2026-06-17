@@ -87,6 +87,7 @@ class TableBase(BaseModel):
     total_price: int = 0
     registered_at: Optional[datetime] = None
     timer_started_at: Optional[datetime] = None
+    timer_end_at: Optional[datetime] = None
 
     ismaster: bool = False
     is_reserved: bool = False
@@ -120,6 +121,7 @@ class TableUpdate(BaseModel):
     ismaster: Optional[bool] = None
     mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
+    timer_end_at: Optional[datetime] = None
     is_reserved: Optional[bool] = None
 
 
