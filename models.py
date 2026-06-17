@@ -77,7 +77,7 @@ class TableMaster(Base):
     total_price = Column(Integer, default=0, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
 
-    ismaster = Column(Boolean, default=False, nullable=False)
+    ismaster = Column(Boolean, default=False, nullable=True)
     mastertable_id = Column(String, nullable=True)
     
     is_reserved = Column(Boolean, default=False)
