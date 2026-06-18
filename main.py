@@ -755,6 +755,7 @@ def run_expired_timer_check():
 
         for table in expired_tables:
             users = crud.get_users_by_company(db, table.company_id)
+            crud.create_timer_notification(db, table)
 
             for user in users:
                 if not user.fcmtoken or user.is_push_on is False:
@@ -779,6 +780,8 @@ def run_expired_timer_check():
                     print(f"타이머 푸시 실패 user_id={user.id}: {e}")
 
             table.timer_alert_sent_at = datetime.now(UTC)
+            
+            
 
         db.commit()
 
@@ -808,6 +811,12 @@ def run_expired_timer_check():
     finally:
         db.close()
 
-
-
-
+@app.get("/companies/{company_id}/notifications", response_model=list[schemas.NotificationResponse])
+def read_notifications_by_company(
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return crud.get_notification_by_company(db, company_id)

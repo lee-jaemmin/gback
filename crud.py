@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session
 from models import ( 
             Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
-            TableHistory, TableHistoryPurchase, TablePurchaseLog,
+            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification
         )
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
             ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, ReservationInputCreate,
+            NotificationCreate, NotificationResponse
         )
 from typing import Optional
 from datetime import datetime, UTC
@@ -908,6 +909,16 @@ def table_out(
     db.add(db_history)
     db.flush()
 
+    db_notification = Notification (
+        company_id = db_table.company_id,
+        title = f"테이블 아웃",
+        body = f"{db_table.tablename}번 테이블이 아웃 처리 되었습니다.",
+        type = "OUT"
+    )
+
+    db.add(db_notification)
+    db.flush()
+
     for purchase in db_purchases:
         db_history_purchase = TableHistoryPurchase (
             history_id = db_history.id,
@@ -1027,3 +1038,28 @@ def reregister_table(
     db_table.total_price = total_price
     db.commit()
     return True
+
+# ========================
+# Notification
+# ========================
+def create_timer_notification (
+        db: Session,
+        table: TableMaster,
+) :
+    db_table = get_table(db, table.id)
+
+    db_notification = Notification (
+        company_id = db_table.company_id,
+        title = f"타이머 만료",
+        body = f"{db_table.tablename}번 테이블 타이머가 만료 되었습니다.",
+        type = "TIMEOUT"
+    )
+
+    db.add(db_notification)
+    return db_notification
+
+def get_notification_by_company(
+        db: Session,
+        company_id: str
+):
+    return db.query(Notification).filter(Notification.company_id == company_id).order_by(Notification.created_at.desc()).all()
