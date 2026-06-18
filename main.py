@@ -117,6 +117,16 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+@app.delete("/users/{user_id}")
+def delete_user (
+    user_id: str,
+    db = Session(get_db)
+):
+    result = crud.delete_user(db, user_id)
+    if result is False:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deleted successfully"}
+
 # =====================
 # Table API
 # =====================

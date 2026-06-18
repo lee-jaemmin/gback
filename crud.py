@@ -156,6 +156,13 @@ def update_user(db: Session, user_id:str, user_update: UserUpdate):
 
     return db_user
 
+def delete_user(db: Session, user_id: str):
+    db_user = get_user(db, user_id)
+    if db_user is None:
+        return False
+    db.delete(db_user)
+    db.commit()
+    return True
 # ========================
 # Table
 # ========================
