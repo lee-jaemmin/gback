@@ -120,7 +120,7 @@ def update_user(
 @app.delete("/users/{user_id}")
 def delete_user (
     user_id: str,
-    db = Session(get_db)
+    db: Session = Depends(get_db)
 ):
     result = crud.delete_user(db, user_id)
     if result is False:
