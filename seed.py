@@ -47,7 +47,7 @@ def seed():
                 username="DEVACC",
                 email="devacc@naver.com",
                 role="owner",
-                fcmtoken=None,
+                fcmtoken="dSVnvn0deUUBrYLy4hHmTx:APA91bE5VWPEUnp5HVBvRRfOQzpww9zOm8uye8ytCDg0IZ28Lao9aUsPdQU99ZF8kqXZU7V31daoCbjugTKnclHMc1yNOreUpRHFRTQBxXnJk2f8G5t0il8",
                 tablecardfields=["purchases", "persons"],
                 company_id="company_1",
             )
