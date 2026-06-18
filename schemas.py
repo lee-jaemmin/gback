@@ -89,6 +89,7 @@ class TableBase(BaseModel):
     registered_at: Optional[datetime] = None
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None
+    timer_alert_sent_at: Optional[datetime] = None
 
     ismaster: bool = False
     is_reserved: bool = False
@@ -123,6 +124,7 @@ class TableUpdate(BaseModel):
     mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None,
+    timer_alert_sent_at: Optional[datetime] = None,
     is_reserved: Optional[bool] = None
     company_id: Optional[str] = None
 

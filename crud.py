@@ -936,6 +936,7 @@ def table_out(
     db_table.user_name = None
     db_table.timer_started_at = None
     db_table.timer_end_at = None
+    db_table.timer_alert_sent_at = None
     
 
     db.commit()
