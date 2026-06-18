@@ -124,6 +124,7 @@ class TableUpdate(BaseModel):
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None,
     is_reserved: Optional[bool] = None
+    company_id: Optional[str] = None
 
 
 class TableResponse(TableBase):
