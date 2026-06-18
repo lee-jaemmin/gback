@@ -623,7 +623,7 @@ def table_out(
     
     users = get_users_by_company(company_id, db)
     for user in users:
-        if not user.fcmtoken:
+        if not user.fcmtoken or user.is_push_on is False:
             continue
         try:
             send_push_to_token(
@@ -757,7 +757,7 @@ def run_expired_timer_check():
             users = crud.get_users_by_company(db, table.company_id)
 
             for user in users:
-                if not user.fcmtoken:
+                if not user.fcmtoken or user.is_push_on is False:
                     continue
 
                 try:
