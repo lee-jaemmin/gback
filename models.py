@@ -311,3 +311,14 @@ class TableHistoryPurchase(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     history = relationship("TableHistory", back_populates="table_history_purchases")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+
+    title = Column(String, nullable=False)
+    body = Column(String, nullable=False)
+    type = Column(String, nullable=False) # 아웃, 만료 등
+
+    created_at = Column(datetime, nullable=False, default=utc_now)

@@ -438,3 +438,22 @@ class TableHistoryPurchaseResponse(TableHistoryPurchaseBase):
     created_at: datetime
     class Config:
         from_attributes = True
+
+
+# =========================
+# Notifications
+# =========================
+class NotificationCreate(BaseModel):
+    company_id: str
+    title: str
+    body: str
+    type: str
+class NotificationResponse(BaseModel):
+    id: int
+    company_id: str
+    title: str
+    body: str
+    type: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
