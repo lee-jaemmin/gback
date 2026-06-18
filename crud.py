@@ -266,6 +266,16 @@ def create_tables_for_company(
     db.add_all(default_tables)
     return default_tables
 
+def get_expired_timer_tables(db: Session):
+    now = datetime.now(UTC)
+
+    return db.query(TableMaster).filter(
+        TableMaster.timer_end_at.isnot(None),
+        TableMaster.timer_end_at <= now,
+        TableMaster.timer_alert_sent_at.is_(None),
+        TableMaster.status == "inuse",
+    ).all()
+
 # ========================
 # ItemCategory
 # ========================

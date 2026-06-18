@@ -4,14 +4,41 @@ from typing import List
 import models
 import crud
 import schemas
-from database import engine, get_db
+from database import engine, get_db, SessionLocal
 from typing import Optional
 from firebase_push import send_push_to_token
+from datetime import datetime, UTC
+from apscheduler.schedulers.background import BackgroundScheduler
+from contextlib import asynccontextmanager
 
 # 서버 실행 시 DB 테이블 자동 생성 (grid.db에 뼈대 구축)
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+scheduler = BackgroundScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not scheduler.running:
+        scheduler.add_job(
+            run_expired_timer_check,
+            "interval",
+            seconds=30,
+            id="expired_timer_check",
+            replace_existing=True,
+        )
+        scheduler.start()
+        print("[Scheduler] expired timer checker started")
+
+    try:
+        yield
+    finally:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+            print("[Scheduler] shutdown")
+
+
+app = FastAPI(lifespan=lifespan)
 
 # =====================
 # Company API
@@ -689,6 +716,10 @@ def reregister_history(
     raise HTTPException(status_code=500, detail=f"Error: {result}")
 
 
+# =====================
+# Notification
+# =====================
+
 @app.post("/debug/push")
 def debug_push(token: str):
     try:
@@ -708,3 +739,75 @@ def debug_push(token: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/debug/check-expired-timers")
+def check_expired_timers():
+    return run_expired_timer_check()
+
+def run_expired_timer_check():
+    db = SessionLocal()
+
+    try:
+        expired_tables = crud.get_expired_timer_tables(db)
+
+        sent_count = 0
+        failed_count = 0
+
+        for table in expired_tables:
+            users = crud.get_users_by_company(db, table.company_id)
+
+            for user in users:
+                if not user.fcmtoken:
+                    continue
+
+                try:
+                    send_push_to_token(
+                        token=user.fcmtoken,
+                        title="타이머 만료",
+                        body=f"⏰ {table.tablename} 테이블 시간이 만료되었습니다.",
+                        data={
+                            "type": "timer_expired",
+                            "table_id": table.id,
+                            "company_id": table.company_id,
+                            "tablename": table.tablename,
+                        },
+                    )
+                    sent_count += 1
+
+                except Exception as e:
+                    failed_count += 1
+                    print(f"타이머 푸시 실패 user_id={user.id}: {e}")
+
+            table.timer_alert_sent_at = datetime.now(UTC)
+
+        db.commit()
+
+        if expired_tables:
+            print(
+                f"[Timer Check] expired={len(expired_tables)}, "
+                f"sent={sent_count}, failed={failed_count}"
+            )
+
+        return {
+            "expired_table_count": len(expired_tables),
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"[Timer Check Error] {e}")
+
+        return {
+            "expired_table_count": 0,
+            "sent_count": 0,
+            "failed_count": 0,
+            "error": str(e),
+        }
+
+    finally:
+        db.close()
+
+
+
+
