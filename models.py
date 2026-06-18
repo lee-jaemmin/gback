@@ -45,6 +45,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     role = Column(String, default="user", nullable=False)
     fcmtoken = Column(String, nullable=True)
+    is_push_on = Column(Boolean, default=True, nullable=False)
 
     tablecardfields = Column(
         JSON,
