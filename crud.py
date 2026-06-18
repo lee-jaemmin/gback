@@ -146,18 +146,10 @@ def update_user(db: Session, user_id:str, user_update: UserUpdate):
     if db_user is None:
         return None
     
-    if user_update.username is not None: # 변경 사항이 있으면
-        db_user.username = user_update.username
-    if user_update.email is not None:
-        db_user.email = user_update.email
-    if user_update.role is not None:
-        db_user.role = user_update.role
-    if user_update.fcmtoken is not None:
-        db_user.fcmtoken = user_update.fcmtoken
-    if user_update.tablecardfields is not None:
-        db_user.tablecardfields = user_update.tablecardfields
-    if user_update.company_id is not None:
-        db_user.company_id = user_update.company_id
+    update_data = user_update.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
 
     db.commit()
     db.refresh(db_user)
