@@ -321,4 +321,4 @@ class Notification(Base):
     body = Column(String, nullable=False)
     type = Column(String, nullable=False) # 아웃, 만료 등
 
-    created_at = Column(datetime, nullable=False, default=utc_now)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
