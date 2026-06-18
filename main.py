@@ -6,6 +6,7 @@ import crud
 import schemas
 from database import engine, get_db
 from typing import Optional
+from firebase_push import send_push_to_token
 
 # 서버 실행 시 DB 테이블 자동 생성 (grid.db에 뼈대 구축)
 models.Base.metadata.create_all(bind=engine)
@@ -580,14 +581,38 @@ def table_out(
     table_id: str,
     db: Session = Depends(get_db)
 ):
-    db_table = crud.get_table(db, table_id)
+    db_table = crud.get_table(db, table_id)    
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    
+    company_id = db_table.company_id
+    tablename = db_table.tablename
+
     result = crud.table_out(db, table_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
+    
+    users = get_users_by_company(company_id, db)
+    for user in users:
+        if not user.fcmtoken:
+            continue
+        try:
+            send_push_to_token(
+                token=user.fcmtoken,
+                title="테이블 아웃 알림",
+                body=f"{tablename} 테이블이 아웃 처리되었습니다.",
+                data={
+                    "type": "table_out",
+                    "table_id": table_id,
+                    "company_id": company_id,
+                    "tablename": tablename,
+                },
+            )
+        except Exception as e:
+            print(f"푸시 발송 실패 user_id: {user.id}: {e}")
+
     return result
 
 @app.get("/histories/{history_id}", response_model=schemas.TableHistoryResponse)
@@ -662,3 +687,24 @@ def reregister_history(
     if result is True:
         return {"message": "ReRegistered successfully"}
     raise HTTPException(status_code=500, detail=f"Error: {result}")
+
+
+@app.post("/debug/push")
+def debug_push(token: str):
+    try:
+        message_id = send_push_to_token(
+            token=token,
+            title="GRID 테스트 알림",
+            body="푸시 알림 테스트입니다.",
+            data={
+                "type": "debug",
+            },
+        )
+
+        return {
+            "message": "Push sent",
+            "message_id": message_id,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
