@@ -9,7 +9,9 @@ from typing import Optional
 from firebase_push import send_push_to_token
 from datetime import datetime, UTC
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
+from zoneinfo import ZoneInfo
 
 # 서버 실행 시 DB 테이블 자동 생성 (grid.db에 뼈대 구축)
 models.Base.metadata.create_all(bind=engine)
@@ -817,3 +819,25 @@ def read_notifications_by_company(
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return crud.get_notification_by_company(db, company_id)
+
+# =====================
+# Reset
+# =====================
+scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
+
+def run_daily_reset():
+    db = SessionLocal()
+    try:
+        crud.reset_daily_state(db)
+        print("[Daily Reset] 완료")
+    except Exception as e:
+        print(f"[Daily Reset Error] {e}")
+    finally:
+        db.close()
+
+scheduler.add_job(
+    run_daily_reset,
+    CronTrigger(hour=14, minute=0, timezone=ZoneInfo("Asia/Seoul")),
+)
+
+scheduler.start()

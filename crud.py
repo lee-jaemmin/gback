@@ -1063,3 +1063,46 @@ def get_notification_by_company(
         company_id: str
 ):
     return db.query(Notification).filter(Notification.company_id == company_id).order_by(Notification.created_at.desc()).all()
+
+
+# ========================
+# Reset
+# ========================
+
+def reset_daily_state(db: Session):
+    try:
+        # 예약 구매 내역 먼저 삭제
+        db.query(ReservationPurchase).delete(synchronize_session=False)
+
+        # 예약 삭제
+        db.query(Reservation).delete(synchronize_session=False)
+
+        # 현재 테이블 구매 내역 삭제
+        db.query(TablePurchase).delete(synchronize_session=False)
+
+        # 테이블 마스터 초기화
+        db.query(TableMaster).update(
+            {
+                TableMaster.status: "available",
+                TableMaster.customer: None,
+                TableMaster.phonenumber: None,
+                TableMaster.persons: 0,
+                TableMaster.remark: None,
+                TableMaster.total_price: 0,
+                TableMaster.registered_at: None,
+                TableMaster.user_id: None,
+                TableMaster.user_name: None,              
+                TableMaster.group_id: None,
+                TableMaster.timer_started_at: None,
+                TableMaster.timer_end_at: None,
+                TableMaster.timer_alert_sent_at: None,
+            },
+            synchronize_session=False,
+        )
+
+        db.commit()
+        return True
+
+    except Exception:
+        db.rollback()
+        raise
