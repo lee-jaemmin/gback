@@ -311,11 +311,8 @@ def update_item(
     db: Session = Depends(get_db)
 ):
     db_item = crud.update_item(item_id, item_update, db)
-    db_category = crud.get_item_category(db, item_update.category_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
-    if db_category is None:
-        raise HTTPException(status_code=404, detail="Category not found")
     return db_item
 
 # =====================
