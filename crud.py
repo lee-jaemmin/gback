@@ -1071,11 +1071,19 @@ def get_notification_by_company(
 
 def reset_daily_state(db: Session):
     try:
+        # 아직 사용 중인 테이블 아웃 처리(히스토리)
+        db_table = db.query(TableMaster).filter(TableMaster.status == "inuse").all()
+        for table in db_table:
+            try:
+                table_out(db, table.id)
+            except Exception as e:
+                print(f"[Daily reset error]: table_id: {table.id}, e: {e}")
+
         # 예약 구매 내역 먼저 삭제
         db.query(ReservationPurchase).delete(synchronize_session=False)
 
         # 예약 삭제
-        db.query(Reservation).delete(synchronize_session=False)
+        db.query(Reservation).delete(synchronize_session=False)        
 
         # 현재 테이블 구매 내역 삭제
         db.query(TablePurchase).delete(synchronize_session=False)
@@ -1084,15 +1092,16 @@ def reset_daily_state(db: Session):
         db.query(TableMaster).update(
             {
                 TableMaster.status: "available",
-                TableMaster.customer: None,
-                TableMaster.phonenumber: None,
+                TableMaster.customer: "",
+                TableMaster.phonenumber: "",
                 TableMaster.persons: 0,
-                TableMaster.remark: None,
+                TableMaster.remark: "",
                 TableMaster.total_price: 0,
                 TableMaster.registered_at: None,
                 TableMaster.user_id: None,
                 TableMaster.user_name: None,              
                 TableMaster.group_id: None,
+                TableMaster.is_reserved: False,
                 TableMaster.timer_started_at: None,
                 TableMaster.timer_end_at: None,
                 TableMaster.timer_alert_sent_at: None,
