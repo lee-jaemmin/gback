@@ -202,16 +202,27 @@ def read_tables_by_group(
     return crud.get_tables_by_group(db, group_id)
 
 @app.patch("/tables/{table_id}", response_model=schemas.TableResponse)
-def update_table(
+async def update_table(
     table_id: str,
     table_update: schemas.TableUpdate,
     db: Session = Depends(get_db)
 ):
     db_table = crud.update_table(db, table_update, table_id)
-    db_user = crud.get_user(db, table_update.user_id)
     # db_group = crud.get
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    
+    await manager.broadcast(
+        db_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            # db_table이라는 SQLAlchemy 객체를
+            # TableResponse 스키마 형식에 맞게 읽어서
+            # Pydantic 객체로 만들어라
+            # 그다음에 json
+        }
+    )
     return db_table
 
 @app.delete("/tables/{table_id}")
