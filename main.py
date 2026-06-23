@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from websocket_manager import manager
 from sqlalchemy.orm import Session
 from typing import List
 import models
@@ -841,3 +842,16 @@ scheduler.add_job(
 )
 
 scheduler.start()
+
+# =====================
+# Websocket
+# =====================
+@app.websocket("/ws/companies/{company_id}")
+async def websocket_company(websocket: WebSocket, company_id: str):
+    await manager.connect(company_id, websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(company_id, websocket)
