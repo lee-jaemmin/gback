@@ -939,3 +939,7 @@ async def websocket_company(websocket: WebSocket, company_id: str):
     except WebSocketDisconnect:
         print(f"[WS] disconnect company_id={company_id}")
         manager.disconnect(company_id, websocket)
+        
+@app.get("/health")
+def health():
+    return {"status": "ok", "env": "staging"}
