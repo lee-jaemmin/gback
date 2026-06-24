@@ -1,19 +1,40 @@
+import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# SQLite 파일 기반 데이터베이스 주소 (프로젝트 폴더에 grid.db 파일이 생깁니다)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./grid.db"
+# 로컬에서는 DATABASE_URL이 없으므로 기존처럼 grid.db를 사용합니다.
+# Railway에서는 환경변수 DATABASE_URL에 Supabase Postgres 주소를 넣습니다.
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./grid.db") # 얘만 큰 변화점. Railway: 그 url, 로컬: 기존 grid.db
 
-# 데이터베이스 엔진 생성
-# check_same_thread는 SQLite에서만 필요한 특수 설정
+# 일부 플랫폼/DB 서비스는 postgres:// 로 시작하는 URL을 줍니다.
+# SQLAlchemy는 postgresql:// 형식을 더 안정적으로 인식하므로 변환합니다.
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace(
+        "postgres://",
+        "postgresql://",
+        1,
+    )
+
+# check_same_thread=False 는 SQLite 전용 옵션입니다.
+# Postgres에 이 옵션을 넣으면 문제가 될 수 있으므로 SQLite일 때만 넣습니다.
+connect_args = {}
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL,
+    connect_args=connect_args,
 )
 
-# 데이터베이스에 접속해서 데이터를 넣고 뺄 '세션(대화 창구)' 생성
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+)
 
-# DB 연결 세션을 열고 닫는 의존성 주입 함수 (나중에 API 만들 때 사용)
+Base = declarative_base()
+
 def get_db():
     db = SessionLocal()
     try:
