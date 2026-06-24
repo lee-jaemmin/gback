@@ -615,7 +615,7 @@ def reservation_check_in (
 # History API
 # =====================
 @app.post("/tables/{table_id}/out", response_model=schemas.TableHistoryResponse)
-def table_out(
+async def table_out(
     table_id: str,
     db: Session = Depends(get_db)
 ):
@@ -631,6 +631,14 @@ def table_out(
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
+    
+    await manager.broadcast(
+        company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+        }
+    )
     
     users = get_users_by_company(company_id, db)
     for user in users:
@@ -708,11 +716,14 @@ def read_history_purchases_by_history(
     return crud.get_history_purchases_by_history(db ,history_id)
 
 @app.post("/tables/{table_id}/re-register/histories/{history_id}") 
-def reregister_history(
+async def reregister_history(
     table_id: str,
     history_id: int,
     db: Session = Depends(get_db)
 ) : 
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
     result = crud.reregister_table(db, history_id, table_id)
     if result == "History not found":
         raise HTTPException(status_code=404, detail="History not found")
@@ -723,6 +734,13 @@ def reregister_history(
     if result == "Table already in use":
         raise HTTPException(status_code=409, detail="Table already in use")
     if result is True:
+        await manager.broadcast(
+            db_table.company_id,
+            {
+                "type": "table_updated",
+                "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            }
+        )
         return {"message": "ReRegistered successfully"}
     raise HTTPException(status_code=500, detail=f"Error: {result}")
 
@@ -859,10 +877,12 @@ scheduler.start()
 # =====================
 @app.websocket("/ws/companies/{company_id}")
 async def websocket_company(websocket: WebSocket, company_id: str):
+    print(f"[WS] connect company_id={company_id}")
     await manager.connect(company_id, websocket)
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        print(f"[WS] disconnect company_id={company_id}")
         manager.disconnect(company_id, websocket)
