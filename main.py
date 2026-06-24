@@ -642,11 +642,12 @@ def delete_res_purchase(
     return {"message": "Reservation Purchase deleted successfully"}
 
 @app.post("/reservations/{reservation_id}/check-in", response_model=schemas.TableResponse)
-def reservation_check_in (
+async def reservation_check_in (
     reservation_id: int,
     db: Session = Depends(get_db)
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
+    db_table = crud.get_table(db, db_reservation.table_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
     result = crud.reservation_check_in(db, reservation_id)
@@ -654,6 +655,13 @@ def reservation_check_in (
         raise HTTPException(status_code=400, detail="Table is not available")
     if result is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    await manager.broadcast(
+        db_reservation.table.company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+        }
+    )
     return result
 
 # =====================
