@@ -517,14 +517,29 @@ def update_reservation(
     return crud.update_reservation(db, reservation_update, reservation_id)
 
 @app.delete("/reservations/{reservation_id}")
-def delete_reservation(
+async def delete_reservation(
     reservation_id: int,
     db: Session = Depends(get_db),
 ):
-    db_reservation = crud.delete_reservation(db, reservation_id)
+    db_reservation = crud.get_reservation(db, reservation_id)
+    company_id = db_reservation.table.company_id
 
-    if db_reservation is False:
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    result = crud.delete_reservation(db, reservation_id)
+
+    if result is False:
         raise HTTPException(status_code=404, detail="Reservation or Table not found")
+
+    table = result
+    await manager.broadcast(
+        company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(table).model_dump(mode="json")
+        }
+    )
 
     return {"message": "Reservation deleted successfully"}
 
@@ -545,14 +560,7 @@ async def register_reservation (
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-
-    await manager.broadcast(
-        db_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-        }
-    )
+    
     await manager.broadcast(
         db_table.company_id,
         {

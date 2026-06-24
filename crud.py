@@ -678,7 +678,7 @@ def delete_reservation(
     
     db.delete(db_reservation)
     db.commit()
-    return True # 방금 삭제된 객체 반환
+    return db_table # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
 
 # ========================
 # ReservationPurchase: table_id 접근 위해서는 Reservation을 거쳐야 함.
