@@ -460,14 +460,32 @@ def delete_log_and_purchase (
 # Reservation API
 # =====================
 @app.post("/reservations", response_model=schemas.ReservationResponse)
-def create_reservation(
+async def create_reservation(
     reservation: schemas.ReservationCreate,
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    return crud.create_reservation(db, reservation)
+    
+    db_reservation = crud.create_reservation(db, reservation)
+    # 만들어 놔야 밑에서 쓸 수가 있음. reservation은 Create 객체라서 쓸 수 없음. 필요한 필드가 없을 수 있음.
+    await manager.broadcast(
+        db_table.company_id, 
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+        }
+    )
+    
+    await manager.broadcast(
+        db_table.company_id, 
+        {
+            "type": "reservation_created",
+            "payload": schemas.ReservationResponse.model_validate(db_reservation).model_dump(mode="json")
+        }
+    )
+    return db_reservation
 
 @app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 def read_reservation(
@@ -511,7 +529,7 @@ def delete_reservation(
     return {"message": "Reservation deleted successfully"}
 
 @app.post("/tables/{table_id}/register-reservation") 
-def register_reservation (
+async def register_reservation (
     table_id: str,
     register: schemas.ReservationInputCreate,
     db: Session = Depends(get_db)
@@ -523,6 +541,25 @@ def register_reservation (
         raise HTTPException(status_code=409, detail="Table already reservedßß")
     if result == "Item not found":
         raise HTTPException(status_code=404, detail="Item not found")
+
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    await manager.broadcast(
+        db_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+        }
+    )
+    await manager.broadcast(
+        db_table.company_id,
+        {
+            "type": "reservation_created",
+            "payload": schemas.ReservationResponse.model_validate(result).model_dump(mode="json")
+        }
+    )
     return result
     
 
