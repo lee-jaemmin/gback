@@ -14,7 +14,7 @@ from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 
-# 서버 실행 시 DB 테이블 자동 생성 (grid.db에 뼈대 구축)
+
 models.Base.metadata.create_all(bind=engine)
 
 scheduler = BackgroundScheduler()
@@ -939,7 +939,7 @@ async def websocket_company(websocket: WebSocket, company_id: str):
     except WebSocketDisconnect:
         print(f"[WS] disconnect company_id={company_id}")
         manager.disconnect(company_id, websocket)
-        
+
 @app.get("/health")
 def health():
     return {"status": "ok", "env": "staging"}
