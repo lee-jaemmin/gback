@@ -976,7 +976,7 @@ def run_daily_reset():
 
 scheduler.add_job(
     run_daily_reset,
-    CronTrigger(hour=20, minute=56, timezone=ZoneInfo("Asia/Seoul")),
+    CronTrigger(hour=14, minute=00, timezone=ZoneInfo("Asia/Seoul")),
 )
 
 scheduler.start()
