@@ -817,17 +817,19 @@ async def move_table (
     to_table_id: str,
     db: Session = Depends(get_db)
 ):
-    db_table = crud.get_table(db, from_table_id)
-    if db_table is None: 
-        raise HTTPException(status_code=404, detail="TABLE NOT FOUND")
-    db_company = crud.get_company(db, db_table.company_id)
+    db_from_table = crud.get_table(db, from_table_id)
+    if db_from_table is None: 
+        raise HTTPException(status_code=404, detail="FROM TABLE NOT FOUND")
+    
+    db_to_table = crud.get_table(db, from_table_id)
+    if db_to_table is None: 
+        raise HTTPException(status_code=404, detail="TO TABLE NOT FOUND")
+    
+    db_company = crud.get_company(db, db_from_table.company_id)
     if db_company is None: 
         raise HTTPException(status_code=404, detail="COMPANY NOT FOUND")
+    
     result = crud.moveTable(db, from_table_id, to_table_id)
-    if result == "FROM TABLE NOT FOUND":
-        raise HTTPException(status_code=404, detail="FROM TABLE NOT FOUND")
-    if result == "TO TABLE NOT FOUND":
-        raise HTTPException(status_code=404, detail="TO TABLE NOT FOUND")
     if result == "FROM TABLE NOT USING":
         raise HTTPException(status_code=422, detail="FROM TABLE NOT USING")
     if result == "TO TABLE ALREADY IN USE":
@@ -838,6 +840,13 @@ async def move_table (
         {
             "type": "table_updated",
             "payload": schemas.TableResponse.model_validate(result).model_dump(mode="json")
+        }
+    )
+    await manager.broadcast(
+        db_company.id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_from_table).model_dump(mode="json")
         }
     )
     return {"message": "Table moved successfully"}
