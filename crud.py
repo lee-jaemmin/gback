@@ -575,6 +575,7 @@ def create_purchase_and_log(
     )
 
     db.add(db_purchase)
+    db.flush()
     recalculate_table_total_price(db, log.table_id)
     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
