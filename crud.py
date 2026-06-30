@@ -1159,7 +1159,6 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_to.timer_started_at = db_from.timer_started_at
     db_to.timer_alert_sent_at = db_from.timer_alert_sent_at
     db_to.timer_end_at = db_from.timer_end_at
-    db_to.updated_at = db_from.updated_at
     db_to.user_id = db_from.user_id
     db_to.user_name = db_from.user_name
 
