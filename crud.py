@@ -433,11 +433,10 @@ def create_purchase(
         item_name = item_name
     )
 
-    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
-
     db.add(db_purchase)
     db.flush()
     recalculate_table_total_price(db, purchase.table_id)
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
     db.refresh(db_purchase)
     db.refresh(db_table)
