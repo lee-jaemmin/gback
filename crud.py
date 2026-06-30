@@ -1134,10 +1134,6 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_from = get_table(db, from_table_id)
     db_to = get_table(db, to_table_id)
 
-    if db_from is None:
-        return "FROM TABLE NOT FOUND"
-    if db_to is None:
-        return "TO TABLE NOT FOUND"
     if db_from.status == "available":
         return "FROM TABLE NOT USING"
     if db_to.status == "inuse":
