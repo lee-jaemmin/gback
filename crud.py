@@ -1149,7 +1149,6 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
         purchase.table_id = to_table_id
     
     db_to.customer = db_from.customer
-    db_to.is_reserved = db_from.is_reserved
     db_to.persons = db_from.persons
     db_to.phonenumber = db_from.phonenumber
     db_to.purchase_summary = db_from.purchase_summary
