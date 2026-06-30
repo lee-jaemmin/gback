@@ -430,7 +430,7 @@ def create_purchase_log(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return crud.create_purchase(db, log)
+    return crud.create_purchase_and_log(db, log)
 
 @app.get("/tables/{table_id}/purchase-logs", response_model=list[schemas.TablePurchaseLogResponse])
 def read_purchase_log(
