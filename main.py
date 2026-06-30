@@ -333,7 +333,7 @@ def update_item(
 # Purchase API
 # =====================
 @app.post("/purchases", response_model=schemas.TablePurchaseResponse)
-def create_purchase(
+async def create_purchase(
     purchase: schemas.TablePurchaseCreate,
     db: Session = Depends(get_db)
 ):
@@ -345,6 +345,13 @@ def create_purchase(
         raise HTTPException(status_code=404, detail="Table not found")
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    await manager.broadcast(
+        db_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableUpdate.model_validate(db_table).model_dump(mode="json")
+        }
+    )
     
     return crud.create_purchase(db, purchase)
 

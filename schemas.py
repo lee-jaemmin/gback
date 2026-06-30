@@ -96,6 +96,7 @@ class TableBase(BaseModel):
     ismaster: bool = False
     is_reserved: bool = False
     mastertable_id: Optional[str] = None
+    purchase_summary: Optional[str] = None
 
 
 class TableCreate(TableBase):
@@ -125,10 +126,11 @@ class TableUpdate(BaseModel):
     ismaster: Optional[bool] = None
     mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
-    timer_end_at: Optional[datetime] = None,
-    timer_alert_sent_at: Optional[datetime] = None,
+    timer_end_at: Optional[datetime] = None
+    timer_alert_sent_at: Optional[datetime] = None
     is_reserved: Optional[bool] = None
     company_id: Optional[str] = None
+    purchase_summary: Optional[str] = None
 
 
 class TableResponse(TableBase):

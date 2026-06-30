@@ -402,6 +402,7 @@ def create_purchase(
     purchase: TablePurchaseCreate
 ):
     db_item = get_item(purchase.item_id, db) # 이번에 주문한 아이템.
+    db_table = get_table(db, purchase.table_id)
 
     existing_purchase = (
         db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인.
@@ -414,6 +415,7 @@ def create_purchase(
         # 바뀐 품목당 가격 재계산
         existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
         recalculate_table_total_price(db, existing_purchase.table_id)
+        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
         db.commit()
         db.refresh(existing_purchase)
         return existing_purchase
@@ -430,6 +432,8 @@ def create_purchase(
         total_price = total_price,
         item_name = item_name
     )
+
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
 
     db.add(db_purchase)
     db.flush()
@@ -485,6 +489,13 @@ def delete_purchase(
     db.delete(db_purchase)
     db.commit()
     return True 
+
+def build_purchase_summary(db: Session, table_id: str) -> str:
+    purchases = db.query(TablePurchase).filter(TablePurchase.table_id == table_id).all()
+    return ",".join(
+        f"{purchase.item_name} {purchase.quantity}"
+        for purchase in purchases
+    )
 
 # ========================
 # TablePurchaseLog
