@@ -517,7 +517,7 @@ def build_purchase_summary(db: Session, table_id: str) -> str:
 # ========================
 # TablePurchaseLog
 # ========================
-def create_purchase_log(
+def create_purchase_and_log(
         db: Session,
         log: TablePurchaseLogCreate
 ) :
@@ -526,6 +526,9 @@ def create_purchase_log(
         return None
     db_user = get_user(db, log.user_id)
     if db_user is None:
+        return None
+    db_table = get_table(db, log.table_id)
+    if db_table is None:
         return None
 
     db_log = TablePurchaseLog (
@@ -539,11 +542,44 @@ def create_purchase_log(
         user_name = db_user.username,
         batch_id = log.batch_id,
     )
-
     db.add(db_log)
+    db.flush()
+
+    existing_purchase = (
+        db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인.
+            TablePurchase.table_id == log.table_id,
+            TablePurchase.item_id == log.item_id).first()
+    )
+
+    if existing_purchase is not None:
+        existing_purchase.quantity += log.quantity
+        # 바뀐 품목당 가격 재계산
+        existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
+        recalculate_table_total_price(db, existing_purchase.table_id)
+        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+        db.commit()
+        db.refresh(existing_purchase)
+        return existing_purchase
+    
+    unit_price = db_item.item_price
+    total_price = unit_price * log.quantity
+    item_name = db_item.item_name
+
+    db_purchase = TablePurchase(
+        table_id = log.table_id,
+        item_id = log.item_id,
+        quantity = log.quantity,
+        unit_price = unit_price,
+        total_price = total_price,
+        item_name = item_name
+    )
+
+    db.add(db_purchase)
+    recalculate_table_total_price(db, log.table_id)
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
-    db.refresh(db_log)
-    return db_log
+    db.refresh(db_purchase)
+    return db_purchase
 
 def get_purchase_logs(
         db: Session,

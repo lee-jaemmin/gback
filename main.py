@@ -413,7 +413,7 @@ def delete_purchase (
 # =====================
 # TablePurchaseLog API
 # =====================
-@app.post("/purchase-log", response_model=schemas.TablePurchaseLogResponse)
+@app.post("/purchase-log", response_model=schemas.TablePurchaseResponse)
 def create_purchase_log(
     log: schemas.TablePurchaseLogCreate,
     db: Session = Depends(get_db)
