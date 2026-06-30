@@ -664,25 +664,25 @@ def register_purchase(
         db_table.purchase_summary = build_purchase_summary(db, db_table.id)
         db.add(existing_purchase)
         db.flush()
-    
-    # 신규면
-    unit_price = db_item.item_price
-    total_price = unit_price * log.quantity
-    item_name = db_item.item_name
+    else:    
+        # 신규면
+        unit_price = db_item.item_price
+        total_price = unit_price * log.quantity
+        item_name = db_item.item_name
 
-    db_purchase = TablePurchase(
-        table_id = log.table_id,
-        item_id = log.item_id,
-        quantity = log.quantity,
-        unit_price = unit_price,
-        total_price = total_price,
-        item_name = item_name
-    )
-   
-    db.add(db_purchase)
-    db.flush()
-    recalculate_table_total_price(db, db_table.id)
-    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+        db_purchase = TablePurchase(
+            table_id = log.table_id,
+            item_id = log.item_id,
+            quantity = log.quantity,
+            unit_price = unit_price,
+            total_price = total_price,
+            item_name = item_name
+        )
+    
+        db.add(db_purchase)
+        db.flush()
+        recalculate_table_total_price(db, db_table.id)
+        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
     db.refresh(db_purchase)
     return {"message": "register purchase successfully"}
