@@ -663,7 +663,6 @@ def register_purchase(
         recalculate_table_total_price(db, existing_purchase.table_id)
         db_table.purchase_summary = build_purchase_summary(db, db_table.id)
         db.add(existing_purchase)
-        db.flush()
     else:    
         # 신규면
         unit_price = db_item.item_price
@@ -684,7 +683,6 @@ def register_purchase(
         recalculate_table_total_price(db, db_table.id)
         db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
-    db.refresh(db_purchase)
     return {"message": "register purchase successfully"}
     
 
