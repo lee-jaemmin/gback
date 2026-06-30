@@ -811,7 +811,7 @@ async def reregister_history(
 # =====================
 # MoveAPI
 # =====================
-@app.post("/table-move", response_model=schemas.TableResponse)
+@app.post("/table-move" )
 async def move_table (
     from_table_id: str,
     to_table_id: str,
