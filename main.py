@@ -345,15 +345,19 @@ async def create_purchase(
         raise HTTPException(status_code=404, detail="Table not found")
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    db_purchase = crud.create_purchase(db, purchase)
+    db.refresh(db_table)
+
     await manager.broadcast(
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableUpdate.model_validate(db_table).model_dump(mode="json")
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
         }
     )
     
-    return crud.create_purchase(db, purchase)
+    return db_purchase
 
 @app.get("/purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
 def read_purchase(
