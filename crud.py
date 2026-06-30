@@ -1126,3 +1126,71 @@ def reset_daily_state(db: Session):
     except Exception:
         db.rollback()
         raise
+
+# ========================
+# Move
+# ========================
+def moveTable(db: Session, from_table_id: str, to_table_id: str):
+    db_from = get_table(db, from_table_id)
+    db_to = get_table(db, to_table_id)
+
+    if db_from is None:
+        return "FROM TABLE NOT FOUND"
+    if db_to is None:
+        return "TO TABLE NOT FOUND"
+    if db_from.status == "available":
+        return "FROM TABLE NOT USING"
+    if db_to.status == "inuse":
+        return "TO TABLE ALREADY IN USE"
+    
+    from_table_purchases = get_purchases_by_table(db, from_table_id)
+    
+    for purchase in from_table_purchases:
+        purchase.table_id = to_table_id
+    
+    db_to.customer = db_from.customer
+    db_to.is_reserved = db_from.is_reserved
+    db_to.persons = db_from.persons
+    db_to.phonenumber = db_from.phonenumber
+    db_to.purchase_summary = db_from.purchase_summary
+    db_to.remark = db_from.remark
+    db_to.status = db_from.status
+    db_to.registered_at = db_from.registered_at
+    db_to.total_price = db_from.total_price
+    db_to.timer_started_at = db_from.timer_started_at
+    db_to.timer_alert_sent_at = db_from.timer_alert_sent_at
+    db_to.timer_end_at = db_from.timer_end_at
+    db_to.updated_at = db_from.updated_at
+    db_to.user_id = db_from.user_id
+    db_to.user_name = db_from.user_name
+
+    db.add(db_to)
+    db.flush()
+
+    db_from.customer = ""
+    db_from.is_reserved = False
+    db_from.persons = 0
+    db_from.phonenumber = ""
+    db_from.purchase_summary = ""
+    db_from.remark = ""
+    db_from.status = 'available'
+    db_from.registered_at = None
+    db_from.total_price = 0
+    db_from.timer_started_at = None
+    db_from.timer_alert_sent_at = None
+    db_from.timer_end_at = None
+    db_from.user_id = None
+    db_from.user_name = None
+
+    db.add(db_from)
+    db.flush()
+
+    from_table_logs = get_purchase_logs(db, from_table_id)
+    for log in from_table_logs:
+        log.table_id = to_table_id
+    
+    db.commit()
+    return db_to
+
+
+    
