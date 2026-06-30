@@ -4,6 +4,7 @@ from sqlalchemy import (
     String,
     Boolean,
     DateTime,
+    Date,
     ForeignKey,
     Text,
     JSON,
@@ -287,6 +288,10 @@ class TableHistory(Base):
 
     registered_at = Column(DateTime(timezone=True), nullable=True)
     out_at = Column(DateTime(timezone=True), nullable=False)
+    business_date = Column(Date, nullable=True, index=True)
+    closed_reason = Column(String, default="manual_out", nullable=False)
+    re_registered_at = Column(DateTime(timezone=True), nullable=True)
+    re_registered_table_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     table_history_purchases = relationship(

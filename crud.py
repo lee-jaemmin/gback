@@ -10,9 +10,26 @@ from schemas import (
             NotificationCreate, NotificationResponse
         )
 from typing import Optional
-from datetime import datetime, UTC
+from datetime import datetime, UTC, date, time, timedelta
+from zoneinfo import ZoneInfo
 import random
 import uuid
+
+KST = ZoneInfo("Asia/Seoul")
+BUSINESS_DAY_START = time(18, 0)
+
+
+def get_business_date(dt: Optional[datetime] = None) -> date:
+    target = dt or datetime.now(UTC)
+    if target.tzinfo is None:
+        target = target.replace(tzinfo=UTC)
+
+    local_dt = target.astimezone(KST)
+    local_time = local_dt.time()
+    if local_time >= BUSINESS_DAY_START:
+        return local_dt.date()
+    return local_dt.date() - timedelta(days=1)
+
 
 def recalculate_table_total_price(db: Session, table_id: str):
     db_table = get_table(db, table_id)
@@ -890,7 +907,8 @@ def reservation_check_in(
 # ========================
 def table_out(
         db: Session,
-        table_id: str,     
+        table_id: str,
+        closed_reason: str = "manual_out",
 ): 
     db_table = get_table(db, table_id) # 해당 테이블 가져옴
     if db_table is None:
@@ -902,6 +920,9 @@ def table_out(
     # 해당 테이블의 구매 리스트 ex. 호세3, 모엣1, 잭다니엘2 ... 
     # 아웃 시킬 때 db에서 내역을 날린다면, 현재 사용 중인 기록만 남게 됨.    
     
+    out_at = datetime.now(UTC)
+    business_date_source = db_table.registered_at or out_at
+
     db_history = TableHistory (
         table_id = table_id,
         tablename = db_table.tablename,
@@ -914,7 +935,9 @@ def table_out(
         user_name = db_table.user_name,
         company_id = db_table.company_id,
         registered_at = db_table.registered_at,
-        out_at = datetime.now(UTC)
+        out_at = out_at,
+        business_date = get_business_date(business_date_source),
+        closed_reason = closed_reason,
     )
 
     db.add(db_history)
@@ -960,6 +983,7 @@ def table_out(
     db_table.persons = 0
     db_table.remark = ""
     db_table.total_price = 0
+    db_table.purchase_summary = ""
     db_table.registered_at = None
     db_table.ismaster = False
     db_table.mastertable_id = None 
@@ -985,6 +1009,21 @@ def get_histories_by_table(
         table_id: str,
 ):
     return db.query(TableHistory).filter(TableHistory.table_id == table_id).all()
+
+def get_histories_by_company_and_business_date(
+        db: Session,
+        company_id: str,
+        target_business_date: date,
+):
+    return (
+        db.query(TableHistory)
+        .filter(
+            TableHistory.company_id == company_id,
+            TableHistory.business_date == target_business_date,
+        )
+        .order_by(TableHistory.out_at.desc())
+        .all()
+    )
     
 def get_history_purchase(
         db: Session,
@@ -1015,6 +1054,8 @@ def reregister_table(
     db_history = get_history(db, history_id)
     if db_history is None:
         return "History not found"
+    if db_history.re_registered_at is not None:
+        return "History already re-registered"
     
     db_history_purchases = get_history_purchases_by_history(db, history_id)
     if not db_history_purchases:
@@ -1047,6 +1088,10 @@ def reregister_table(
         db.add(db_purchase)
     total_price = sum(hp.unit_price * hp.quantity for hp in db_history_purchases)
     db_table.total_price = total_price
+    db.flush()
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+    db_history.re_registered_at = datetime.now(UTC)
+    db_history.re_registered_table_id = db_table.id
     db.commit()
     return True
 
@@ -1086,7 +1131,7 @@ def reset_daily_state(db: Session):
         db_table = db.query(TableMaster).filter(TableMaster.status == "inuse").all()
         for table in db_table:
             try:
-                table_out(db, table.id)
+                table_out(db, table.id, closed_reason="daily_reset")
             except Exception as e:
                 print(f"[Daily reset error]: table_id: {table.id}, e: {e}")
 
@@ -1108,10 +1153,13 @@ def reset_daily_state(db: Session):
                 TableMaster.persons: 0,
                 TableMaster.remark: "",
                 TableMaster.total_price: 0,
+                TableMaster.purchase_summary: "",
                 TableMaster.registered_at: None,
                 TableMaster.user_id: None,
                 TableMaster.user_name: None,              
                 TableMaster.group_id: None,
+                TableMaster.ismaster: False,
+                TableMaster.mastertable_id: None,
                 TableMaster.is_reserved: False,
                 TableMaster.timer_started_at: None,
                 TableMaster.timer_end_at: None,

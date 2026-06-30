@@ -8,7 +8,7 @@ import schemas
 from database import engine, get_db, SessionLocal
 from typing import Optional
 from firebase_push import send_push_to_token
-from datetime import datetime, UTC
+from datetime import datetime, UTC, date
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo
 
 models.Base.metadata.create_all(bind=engine)
 
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
 
 
 @asynccontextmanager
@@ -30,8 +30,15 @@ async def lifespan(app: FastAPI):
             id="expired_timer_check",
             replace_existing=True,
         )
+        scheduler.add_job(
+            run_daily_reset,
+            CronTrigger(hour=14, minute=0, timezone=ZoneInfo("Asia/Seoul")),
+            id="daily_reset",
+            replace_existing=True,
+        )
         scheduler.start()
         print("[Scheduler] expired timer checker started")
+        print("[Scheduler] daily reset scheduled at 14:00 KST")
 
     try:
         yield
@@ -744,6 +751,23 @@ def read_histories_by_table(
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     return crud.get_histories_by_table(db, table_id)
+
+@app.get("/companies/{company_id}/histories", response_model=list[schemas.TableHistoryResponse])
+def read_histories_by_company(
+    company_id: str,
+    business_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    target_business_date = business_date or crud.get_business_date()
+    return crud.get_histories_by_company_and_business_date(
+        db,
+        company_id,
+        target_business_date,
+    )
     
 # =====================
 # HistoryPurchase API
@@ -797,6 +821,8 @@ async def reregister_history(
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already in use":
         raise HTTPException(status_code=409, detail="Table already in use")
+    if result == "History already re-registered":
+        raise HTTPException(status_code=409, detail="History already re-registered")
     if result is True:
         await manager.broadcast(
             db_table.company_id,
@@ -959,11 +985,6 @@ def read_notifications_by_company(
         raise HTTPException(status_code=404, detail="Company not found")
     return crud.get_notification_by_company(db, company_id)
 
-# =====================
-# Reset
-# =====================
-scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
-
 def run_daily_reset():
     db = SessionLocal()
     try:
@@ -973,13 +994,6 @@ def run_daily_reset():
         print(f"[Daily Reset Error] {e}")
     finally:
         db.close()
-
-scheduler.add_job(
-    run_daily_reset,
-    CronTrigger(hour=14, minute=00, timezone=ZoneInfo("Asia/Seoul")),
-)
-
-scheduler.start()
 
 # =====================
 # Websocket

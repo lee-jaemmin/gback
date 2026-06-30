@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 
 # API 명세서
 # 요청 데이터는 ~~해야 한다. ex. id는 str이어야한다 등
@@ -410,6 +410,10 @@ class TableHistoryBase(BaseModel):
 
     registered_at: Optional[datetime] = None
     out_at: datetime
+    business_date: Optional[date] = None
+    closed_reason: str = "manual_out"
+    re_registered_at: Optional[datetime] = None
+    re_registered_table_id: Optional[str] = None
 
 
 class TableHistoryCreate(TableHistoryBase):
