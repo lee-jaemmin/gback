@@ -413,7 +413,7 @@ def delete_purchase (
 # =====================
 # TablePurchaseLog API
 # =====================
-@app.post("/purchase-log", response_model=schemas.TablePurchaseResponse)
+@app.post("/purchase-log", response_model=schemas.TablePurchaseLogResponse)
 def create_purchase_log(
     log: schemas.TablePurchaseLogCreate,
     db: Session = Depends(get_db)
@@ -430,7 +430,7 @@ def create_purchase_log(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return crud.create_purchase_and_log(db, log)
+    return crud.create_purchase_log(db, log)
 
 @app.get("/tables/{table_id}/purchase-logs", response_model=list[schemas.TablePurchaseLogResponse])
 def read_purchase_log(
