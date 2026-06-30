@@ -969,7 +969,7 @@ def table_out(
     db_table.timer_started_at = None
     db_table.timer_end_at = None
     db_table.timer_alert_sent_at = None
-    
+    db_table.purchase_summary = None
 
     db.commit()
     return db_history
