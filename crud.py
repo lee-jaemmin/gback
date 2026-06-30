@@ -440,6 +440,7 @@ def create_purchase(
     recalculate_table_total_price(db, purchase.table_id)
     db.commit()
     db.refresh(db_purchase)
+    db.refresh(db_table)
     return db_purchase
 
 def get_purchase(
