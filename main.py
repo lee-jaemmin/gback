@@ -366,6 +366,32 @@ async def create_purchase(
     
     return db_purchase
 
+@app.post("/register-purchase")
+async def register_purchase(
+    log: schemas.TablePurchaseLogCreate,
+    db: Session = Depends(get_db)
+):
+    
+    result = crud.register_purchase(db, log)
+    db_table = crud.get_table(db, log.table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "ITEM NOT FOUND":
+        raise HTTPException(status_code=404, detail="Item not found")
+    if result == "USER NOT FOUND":
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await manager.broadcast(
+        db_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+        }
+    )
+    return result
+    
+
+
 @app.get("/purchases/{purchase_id}", response_model=schemas.TablePurchaseResponse)
 def read_purchase(
     purchase_id: int,

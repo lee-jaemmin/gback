@@ -621,19 +621,72 @@ def delete_logs_and_purchases(
     return True
     
 
-    # if update_log.table_id is not None:
-    #     db_log.table_id = update_log.table_id
-    # if update_log.item_id is not None:
-    #     db_log.item_id = update_log.item_id
-    # if update_log.item_name is not None:
-    #     db_log.item_name = update_log.item_name
-    # if update_log.quantity is not None:
-    #     db_log.quantity = update_log.quantity
-    # if update_log.unit_price is not None:
-    #     db_log.unit_price = update_log.unit_price
-    # if update_log.total_price is not None:
-    #     db_log.total_price = 
+def register_purchase(
+        db: Session,
+        log: TablePurchaseLogCreate
+):
+    db_item = get_item(log.item_id, db)
+    if db_item is None:
+        return "ITEM NOT FOUND"
+    db_user = get_user(db, log.user_id)
+    if db_user is None:
+        return "USER NOT FOUND"
+    db_table = get_table(db, log.table_id)
+    if db_table is None:
+        return "TABLE NOT FOUND"
 
+    db_log = TablePurchaseLog (
+        table_id = log.table_id,
+        item_id = db_item.id,
+        item_name = db_item.item_name,
+        quantity = log.quantity,
+        unit_price = db_item.item_price,
+        total_price = db_item.item_price * log.quantity,
+        user_id = log.user_id,
+        user_name = db_user.username,
+        batch_id = log.batch_id,
+    )
+    
+    db.add(db_log)
+    db.flush()
+
+    existing_purchase = (
+        db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인
+            TablePurchase.table_id == log.table_id,
+            TablePurchase.item_id == log.item_id).first()
+    )
+
+    if existing_purchase is not None:
+        existing_purchase.quantity += log.quantity
+        # 바뀐 품목당 가격 재계산
+        existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
+        recalculate_table_total_price(db, existing_purchase.table_id)
+        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+        db.add(existing_purchase)
+        db.flush()
+    
+    # 신규면
+    unit_price = db_item.item_price
+    total_price = unit_price * log.quantity
+    item_name = db_item.item_name
+
+    db_purchase = TablePurchase(
+        table_id = log.table_id,
+        item_id = log.item_id,
+        quantity = log.quantity,
+        unit_price = unit_price,
+        total_price = total_price,
+        item_name = item_name
+    )
+   
+    db.add(db_purchase)
+    db.flush()
+    recalculate_table_total_price(db, db_table.id)
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+    db.commit()
+    db.refresh(db_purchase)
+    return {"message": "register purchase successfully"}
+    
 
 # ========================
 # Reservation
