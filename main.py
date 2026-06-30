@@ -821,7 +821,7 @@ async def move_table (
     if db_from_table is None: 
         raise HTTPException(status_code=404, detail="FROM TABLE NOT FOUND")
     
-    db_to_table = crud.get_table(db, from_table_id)
+    db_to_table = crud.get_table(db, to_table_id)
     if db_to_table is None: 
         raise HTTPException(status_code=404, detail="TO TABLE NOT FOUND")
     
