@@ -934,6 +934,7 @@ def reservation_check_in(
     db_table.phonenumber = db_reservation.customer_phone
     db_table.status = "inuse"
     db_table.is_reserved = False
+    db_table.purchase_summary = ", ".join(f"{purchase.itemname} {purchase.quantity}" for purchase in db_res_purchases)
     db_table.registered_at = datetime.now(UTC)
     
     # res_purchase 개수 (즉 품목 개수) 만큼 tablepurchase생성
