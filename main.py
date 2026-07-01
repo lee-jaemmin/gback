@@ -847,8 +847,6 @@ async def reregister_history(
     result = crud.reregister_table(db, history_id, table_id)
     if result == "History not found":
         raise HTTPException(status_code=404, detail="History not found")
-    if result == "No historypurchase found":
-        raise HTTPException(status_code=404, detail="No historypurchase found")
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already in use":

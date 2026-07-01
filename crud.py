@@ -1111,9 +1111,7 @@ def reregister_table(
     if db_history.re_registered_at is not None:
         return "History already re-registered"
     
-    db_history_purchases = get_history_purchases_by_history(db, history_id)
-    if not db_history_purchases:
-        return "No historypurchase found"   
+    db_history_purchases = get_history_purchases_by_history(db, history_id) 
     
     db_table = get_table(db, table_id)
     if db_table is None:
