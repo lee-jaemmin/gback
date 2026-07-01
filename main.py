@@ -20,25 +20,31 @@ models.Base.metadata.create_all(bind=engine)
 scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
 
 
+def start_scheduler():
+    if scheduler.running:
+        return
+
+    scheduler.add_job(
+        run_expired_timer_check,
+        "interval",
+        seconds=30,
+        id="expired_timer_check",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_daily_reset,
+        CronTrigger(hour=14, minute=0, timezone=ZoneInfo("Asia/Seoul")),
+        id="daily_reset",
+        replace_existing=True,
+    )
+    scheduler.start()
+    print("[Scheduler] expired timer checker started")
+    print("[Scheduler] daily reset scheduled at 14:00 KST")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not scheduler.running:
-        scheduler.add_job(
-            run_expired_timer_check,
-            "interval",
-            seconds=30,
-            id="expired_timer_check",
-            replace_existing=True,
-        )
-        scheduler.add_job(
-            run_daily_reset,
-            CronTrigger(hour=14, minute=0, timezone=ZoneInfo("Asia/Seoul")),
-            id="daily_reset",
-            replace_existing=True,
-        )
-        scheduler.start()
-        print("[Scheduler] expired timer checker started")
-        print("[Scheduler] daily reset scheduled at 14:00 KST")
+    start_scheduler()
 
     try:
         yield
@@ -934,6 +940,24 @@ def debug_push(token: str):
 def check_expired_timers():
     return run_expired_timer_check()
 
+@app.get("/debug/scheduler")
+def debug_scheduler():
+    jobs = []
+
+    for job in scheduler.get_jobs():
+        next_run_time = job.next_run_time
+        jobs.append(
+            {
+                "id": job.id,
+                "next_run_time": next_run_time.isoformat() if next_run_time else None,
+            }
+        )
+
+    return {
+        "running": scheduler.running,
+        "jobs": jobs,
+    }
+
 def run_expired_timer_check():
     db = SessionLocal()
 
@@ -1020,6 +1044,8 @@ def run_daily_reset():
         print(f"[Daily Reset Error] {e}")
     finally:
         db.close()
+
+start_scheduler()
 
 # =====================
 # Websocket
