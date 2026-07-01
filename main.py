@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from websocket_manager import manager
 from sqlalchemy.orm import Session
 from typing import List
@@ -18,6 +18,36 @@ from zoneinfo import ZoneInfo
 models.Base.metadata.create_all(bind=engine)
 
 scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
+
+
+def send_table_out_pushes(
+    company_id: str,
+    table_id: str,
+    tablename: str,
+):
+    db = SessionLocal()
+
+    try:
+        users = crud.get_users_by_company(db, company_id)
+        for user in users:
+            if not user.fcmtoken or user.is_push_on is False:
+                continue
+            try:
+                send_push_to_token(
+                    token=user.fcmtoken,
+                    title="테이블 아웃 알림",
+                    body=f"{tablename} 테이블이 아웃 처리되었습니다.",
+                    data={
+                        "type": "table_out",
+                        "table_id": table_id,
+                        "company_id": company_id,
+                        "tablename": tablename,
+                    },
+                )
+            except Exception as e:
+                print(f"푸시 발송 실패 user_id: {user.id}: {e}")
+    finally:
+        db.close()
 
 
 def start_scheduler():
@@ -720,6 +750,7 @@ async def reservation_check_in (
 @app.post("/tables/{table_id}/out", response_model=schemas.TableHistoryResponse)
 async def table_out(
     table_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, table_id)    
@@ -743,24 +774,7 @@ async def table_out(
         }
     )
     
-    users = get_users_by_company(company_id, db)
-    for user in users:
-        if not user.fcmtoken or user.is_push_on is False:
-            continue
-        try:
-            send_push_to_token(
-                token=user.fcmtoken,
-                title="테이블 아웃 알림",
-                body=f"{tablename} 테이블이 아웃 처리되었습니다.",
-                data={
-                    "type": "table_out",
-                    "table_id": table_id,
-                    "company_id": company_id,
-                    "tablename": tablename,
-                },
-            )
-        except Exception as e:
-            print(f"푸시 발송 실패 user_id: {user.id}: {e}")
+    background_tasks.add_task(send_table_out_pushes, company_id, table_id, tablename)
 
     return result
 
