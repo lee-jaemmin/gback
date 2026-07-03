@@ -731,9 +731,6 @@ def update_reservation(
     db_reservation = get_reservation(db, reservation_id)
     db_table = get_table(db, db_reservation.table_id)
     
-    if db_reservation is None or db_table is None:
-        return None
-    
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
         db_table.reserved_at = reservation_update.reservation_time
