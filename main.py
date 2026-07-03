@@ -649,7 +649,7 @@ async def register_reservation (
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(result).model_dump(mode="json")
+            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
         }
     )
     return result
