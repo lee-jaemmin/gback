@@ -1055,14 +1055,12 @@ start_scheduler()
 # =====================
 @app.websocket("/ws/companies/{company_id}")
 async def websocket_company(websocket: WebSocket, company_id: str):
-    print(f"[WS] connect company_id={company_id}")
     await manager.connect(company_id, websocket)
 
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        print(f"[WS] disconnect company_id={company_id}")
         manager.disconnect(company_id, websocket)
 
 @app.get("/health")
