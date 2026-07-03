@@ -697,6 +697,7 @@ def create_reservation(
     if db_table is None:
         return None
     db_table.is_reserved = True
+    db_table.reserved_at = reservation.reservation_time
     
     db_reservation = Reservation (
         reservation_time = reservation.reservation_time,
@@ -728,12 +729,14 @@ def update_reservation(
         reservation_id: int,
 ):
     db_reservation = get_reservation(db, reservation_id)
+    db_table = get_table(db, db_reservation.table_id)
     
-    if db_reservation is None:
+    if db_reservation is None or db_table is None:
         return None
     
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
+        db_table.reserved_at = reservation_update.reservation_time
     if reservation_update.customer_name is not None:
 
         db_reservation.customer_name = reservation_update.customer_name
@@ -757,6 +760,7 @@ def delete_reservation(
         return False
     
     db_table.is_reserved = False
+    db_table.reserved_at = None
     
     db.delete(db_reservation)
     db.commit()
@@ -772,7 +776,6 @@ def create_res_purchase(
     db_reservation = get_reservation(db, res_purchase.reservation_id)
     if db_reservation is None:
         return None
-    
     db_item = get_item(res_purchase.item_id, db)
     if db_item is None:
         return None
@@ -883,6 +886,7 @@ def register_reservation(
     if db_table.is_reserved is True:
         return "Table already reserved"
     db_table.is_reserved = True
+    db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
         table_id = table_id,
         reservation_time = reservation_input.reservation_time,

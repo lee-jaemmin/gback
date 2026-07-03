@@ -557,14 +557,6 @@ async def create_reservation(
             "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
         }
     )
-    
-    await manager.broadcast(
-        db_table.company_id, 
-        {
-            "type": "reservation_created",
-            "payload": schemas.ReservationResponse.model_validate(db_reservation).model_dump(mode="json")
-        }
-    )
     return db_reservation
 
 @app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
@@ -636,7 +628,6 @@ async def register_reservation (
         raise HTTPException(status_code=409, detail="Table already reservedßß")
     if result == "Item not found":
         raise HTTPException(status_code=404, detail="Item not found")
-
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
@@ -644,7 +635,7 @@ async def register_reservation (
     await manager.broadcast(
         db_table.company_id,
         {
-            "type": "reservation_created",
+            "type": "table_updated",
             "payload": schemas.ReservationResponse.model_validate(result).model_dump(mode="json")
         }
     )

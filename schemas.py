@@ -92,6 +92,7 @@ class TableBase(BaseModel):
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None
     timer_alert_sent_at: Optional[datetime] = None
+    reserved_at: Optional[datetime] = None
 
     ismaster: bool = False
     is_reserved: bool = False

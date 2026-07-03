@@ -86,6 +86,7 @@ class TableMaster(Base):
     timer_started_at = Column(DateTime, nullable=True)
     timer_end_at = Column(DateTime, nullable=True, index=True)
     timer_alert_sent_at = Column(DateTime, nullable=True)
+    reserved_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
