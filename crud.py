@@ -635,6 +635,10 @@ def register_purchase(
     if db_table is None:
         return "TABLE NOT FOUND"
 
+    if db_table.status == 'available':    
+        db_table.status = 'inuse'
+        db_table.registered_at = datetime.now(UTC)
+
     db_log = TablePurchaseLog (
         table_id = log.table_id,
         item_id = db_item.id,
@@ -664,7 +668,7 @@ def register_purchase(
         db_table.purchase_summary = build_purchase_summary(db, db_table.id)
         db.add(existing_purchase)
     else:    
-        # 신규면
+        # 새로운 품목이면
         unit_price = db_item.item_price
         total_price = unit_price * log.quantity
         item_name = db_item.item_name
