@@ -507,12 +507,23 @@ def delete_purchase(
     db.commit()
     return True 
 
-def build_purchase_summary(db: Session, table_id: str) -> str:
-    purchases = db.query(TablePurchase).filter(TablePurchase.table_id == table_id).all()
-    return ",".join(
-        f"{purchase.item_name} {purchase.quantity}"
-        for purchase in purchases
-    )
+def build_purchase_summary(db: Session, table_id: str) -> list[str]:
+    purchases = db.query(TablePurchaseLog).filter(TablePurchaseLog.table_id == table_id).order_by(TablePurchaseLog.batch_id).all()
+    
+    purchase_dict = {}
+
+    for purchase in purchases:
+        item_str = f"{purchase.item_name} {purchase.quantity}"
+
+        if purchase.batch_id not in purchase_dict:
+            purchase_dict[purchase.batch_id] = []
+        
+        purchase_dict[purchase.batch_id].append(item_str)
+            
+    summary = [
+        ", ".join(item for item in purchase_dict.values())
+    ]
+    return summary        
 
 # ========================
 # TablePurchaseLog
@@ -939,7 +950,7 @@ def reservation_check_in(
     db_table.phonenumber = db_reservation.customer_phone
     db_table.status = "inuse"
     db_table.is_reserved = False
-    db_table.purchase_summary = ", ".join(f"{purchase.item_name} {purchase.quantity}" for purchase in db_res_purchases)
+    db_table.purchase_summary = [", ".join(f"{purchase.item_name} {purchase.quantity}" for purchase in db_res_purchases)]
     db_table.registered_at = datetime.now(UTC)
     
     # res_purchase 개수 (즉 품목 개수) 만큼 tablepurchase생성
@@ -1043,7 +1054,7 @@ def table_out(
     db_table.persons = 0
     db_table.remark = ""
     db_table.total_price = 0
-    db_table.purchase_summary = ""
+    db_table.purchase_summary = []
     db_table.registered_at = None
     db_table.ismaster = False
     db_table.mastertable_id = None 
@@ -1053,7 +1064,6 @@ def table_out(
     db_table.timer_started_at = None
     db_table.timer_end_at = None
     db_table.timer_alert_sent_at = None
-    db_table.purchase_summary = None
 
     db.commit()
     return db_history
@@ -1211,7 +1221,7 @@ def reset_daily_state(db: Session):
                 TableMaster.persons: 0,
                 TableMaster.remark: "",
                 TableMaster.total_price: 0,
-                TableMaster.purchase_summary: "",
+                TableMaster.purchase_summary: [],
                 TableMaster.registered_at: None,
                 TableMaster.user_id: None,
                 TableMaster.user_name: None,              
@@ -1271,7 +1281,7 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_from.is_reserved = False
     db_from.persons = 0
     db_from.phonenumber = ""
-    db_from.purchase_summary = ""
+    db_from.purchase_summary = []
     db_from.remark = ""
     db_from.status = 'available'
     db_from.registered_at = None
