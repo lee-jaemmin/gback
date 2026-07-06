@@ -464,3 +464,35 @@ class NotificationResponse(BaseModel):
     created_at: datetime
     class Config:
         from_attributes = True
+
+# =========================
+# MENU CACHE
+# 스키마를 만드는 이유
+# 1. API 형식 고정을 통한 안정성 및 디버깅 강화
+# 2. 불필요한 필드를 응답하지 않을 수 있음. (created_at 등)
+# =========================
+class ItemCache(BaseModel):
+    id: int
+    item_name: str
+    item_price: int
+    is_active: bool
+    company_id: str
+    category_id: int
+
+    class Config:
+        from_attributes = True
+
+class CategoryCache(BaseModel):
+    id: int
+    category_name: str
+    sort_order: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class MenuCacheResponse(BaseModel):
+    id: int
+    version: datetime
+    categories: list[CategoryCache]
+    items: list[ItemCache]
