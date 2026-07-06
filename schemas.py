@@ -492,6 +492,7 @@ class CategoryCache(BaseModel):
         from_attributes = True
 
 class MenuCacheResponse(BaseModel):
+    company_id: str
     version: datetime
     categories: list[CategoryCache]
     items: list[ItemCache]
