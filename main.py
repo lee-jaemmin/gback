@@ -1090,3 +1090,21 @@ async def websocket_company(websocket: WebSocket, company_id: str):
 @app.get("/health")
 def health():
     return {"status": "ok", "env": "staging"}
+
+
+# ========================
+# CACHE
+# ========================
+@app.get("/company/{company_id}/menus-cache", response_model=schemas.MenuCacheResponse)
+def cache_menus(
+        company_id: str,
+        db: Session = Depends(get_db)
+):
+    db_categories = crud.get_item_categories(db) # 객체 리스트 반환: temCategory(id=1, category_name="주류", sort_order=1),
+    db_items = crud.get_items_by_company(company_id, db)
+
+    return {
+        "company_id": company_id,
+        "categories": db_categories,
+        "items": db_items
+    }
