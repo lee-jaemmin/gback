@@ -1106,5 +1106,6 @@ def cache_menus(
     return {
         "company_id": company_id,
         "categories": db_categories,
-        "items": db_items
+        "items": db_items,
+        "version": datetime.now(UTC)
     }
