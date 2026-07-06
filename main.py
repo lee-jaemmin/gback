@@ -318,7 +318,7 @@ def update_categories(
     return db_category
 
 # =====================
-# Item API
+# ITEM API
 # =====================
 @app.post("/items", response_model=schemas.ItemResponse)
 def create_item(
@@ -372,6 +372,17 @@ def update_item(
         raise HTTPException(status_code=404, detail="Item not found")
     return db_item
 
+@app.delete("/items/{item_id}")
+def delete_item (
+    item_id: int,
+    db: Session = Depends(get_db)
+):
+    result = crud.delete_item(db, item_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    if result is True:
+        return {"message": "Item deleted successfully"}
+    
 # =====================
 # Purchase API
 # =====================

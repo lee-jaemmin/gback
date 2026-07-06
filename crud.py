@@ -335,7 +335,7 @@ def update_item_category(db: Session, category_id: int, category_update: ItemCat
     return db_category
 
 # ========================
-# Item
+# ITEM
 # ========================
 def create_item(
         db: Session,
@@ -410,6 +410,17 @@ def update_item(
     db.commit()
     db.refresh(db_item)
     return db_item
+
+def delete_item(
+        db: Session,
+        item_id: int,
+) : 
+    db_item = get_item(item_id, db)
+    if db_item is None:
+        return None
+    db.delete(db_item)
+    db.commit()
+    return True
 
 # ========================
 # TablePurchase 여기서부터는 db: Session 맨 앞에.
