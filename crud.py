@@ -1313,14 +1313,3 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db.commit()
     return db_to
 
-# ========================
-# CACHE
-# ========================
-def cache_menus(
-        db: Session,
-        company_id: str
-):
-    db_categories = get_item_categories(db)
-    db_items = get_items_by_company(company_id, db)
-
-    return db_categories, db_items
