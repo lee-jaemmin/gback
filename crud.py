@@ -521,7 +521,7 @@ def build_purchase_summary(db: Session, table_id: str) -> list[str]:
         purchase_dict[purchase.batch_id].append(item_str)
             
     summary = [
-        ", ".join(item for item in purchase_dict.values())
+        ", ".join(items) for items in purchase_dict.values()
     ]
     return summary        
 
