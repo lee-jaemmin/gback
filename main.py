@@ -1095,7 +1095,7 @@ def health():
 # ========================
 # CACHE
 # ========================
-@app.get("/company/{company_id}/menus-cache", response_model=schemas.MenuCacheResponse)
+@app.get("/company/{company_id}/menu-cache", response_model=schemas.MenuCacheResponse)
 def cache_menus(
         company_id: str,
         db: Session = Depends(get_db)
