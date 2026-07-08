@@ -248,18 +248,22 @@ def read_tables_by_group(
 async def update_table(
     table_id: str,
     table_update: schemas.TableUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_table = crud.update_table(db, table_update, table_id)
     # db_group = crud.get
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    company_id = db_table.company_id
     
-    await manager.broadcast(
-        db_table.company_id,
+    background_tasks.add_task(
+        manager.broadcast,
+        company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload
             # db_table이라는 SQLAlchemy 객체를
             # TableResponse 스키마 형식에 맞게 읽어서
             # Pydantic 객체로 만들어라
@@ -389,6 +393,7 @@ def delete_item (
 @app.post("/purchases", response_model=schemas.TablePurchaseResponse)
 async def create_purchase(
     purchase: schemas.TablePurchaseCreate,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     #FK check
@@ -403,11 +408,15 @@ async def create_purchase(
     db_purchase = crud.create_purchase(db, purchase)
     db.refresh(db_table)
 
-    await manager.broadcast(
-        db_table.company_id,
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    company_id = db_table.company_id
+
+    backgroud_tasks.add_task(
+        manager.broadcast,
+        company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload
         }
     )
     
@@ -416,6 +425,7 @@ async def create_purchase(
 @app.post("/register-purchase")
 async def register_purchase(
     log: schemas.TablePurchaseLogCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     
@@ -427,8 +437,9 @@ async def register_purchase(
         raise HTTPException(status_code=404, detail="Item not found")
     if result == "USER NOT FOUND":
         raise HTTPException(status_code=404, detail="User not found")
-    
-    await manager.broadcast(
+
+    background_tasks.add_task(
+        manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
@@ -553,6 +564,7 @@ def delete_log_and_purchase (
 @app.post("/reservations", response_model=schemas.ReservationResponse)
 async def create_reservation(
     reservation: schemas.ReservationCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, reservation.table_id)
@@ -561,7 +573,9 @@ async def create_reservation(
     
     db_reservation = crud.create_reservation(db, reservation)
     # 만들어 놔야 밑에서 쓸 수가 있음. reservation은 Create 객체라서 쓸 수 없음. 필요한 필드가 없을 수 있음.
-    await manager.broadcast(
+    background_tasks.add_task
+    (
+        manager.broadcast,
         db_table.company_id, 
         {
             "type": "table_updated",
@@ -591,6 +605,7 @@ def read_reservations_by_table(
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
     reservation_update: schemas.ReservationUpdate,
+    backgroud_tasks: BackgroundTasks,
     reservation_id: int,
     db: Session = Depends(get_db)
 ):
@@ -601,7 +616,8 @@ async def update_reservation(
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     result =  crud.update_reservation(db, reservation_update, reservation_id)
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
@@ -614,6 +630,7 @@ async def update_reservation(
 @app.delete("/reservations/{reservation_id}")
 async def delete_reservation(
     reservation_id: int,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
@@ -629,7 +646,8 @@ async def delete_reservation(
         raise HTTPException(status_code=404, detail="Reservation or Table not found")
 
     table = result
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         company_id,
         {
             "type": "table_updated",
@@ -643,6 +661,7 @@ async def delete_reservation(
 async def register_reservation (
     table_id: str,
     register: schemas.ReservationInputCreate,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ) : 
     result = crud.register_reservation(db, register, table_id)
@@ -656,7 +675,8 @@ async def register_reservation (
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
@@ -739,6 +759,7 @@ def delete_res_purchase(
 @app.post("/reservations/{reservation_id}/check-in", response_model=schemas.TableResponse)
 async def reservation_check_in (
     reservation_id: int,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
@@ -750,7 +771,8 @@ async def reservation_check_in (
         raise HTTPException(status_code=400, detail="Table is not available")
     if result is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         db_reservation.table.company_id,
         {
             "type": "table_updated",
@@ -766,6 +788,7 @@ async def reservation_check_in (
 async def table_out(
     table_id: str,
     background_tasks: BackgroundTasks,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, table_id)    
@@ -781,7 +804,8 @@ async def table_out(
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
     
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         company_id,
         {
             "type": "table_updated",
@@ -868,6 +892,7 @@ def read_history_purchases_by_history(
 async def reregister_history(
     table_id: str,
     history_id: int,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ) : 
     db_table = crud.get_table(db, table_id)
@@ -883,7 +908,8 @@ async def reregister_history(
     if result == "History already re-registered":
         raise HTTPException(status_code=409, detail="History already re-registered")
     if result is True:
-        await manager.broadcast(
+        backgroud_tasks.add_task(
+            manager.broadcast,
             db_table.company_id,
             {
                 "type": "table_updated",
@@ -900,6 +926,7 @@ async def reregister_history(
 async def move_table (
     from_table_id: str,
     to_table_id: str,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_from_table = crud.get_table(db, from_table_id)
@@ -920,14 +947,16 @@ async def move_table (
     if result == "TO TABLE ALREADY IN USE":
         raise HTTPException(status_code=409, detail="TO TABLE ALREADY IN USE")
     
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         db_company.id,
         {
             "type": "table_updated",
             "payload": schemas.TableResponse.model_validate(result).model_dump(mode="json")
         }
     )
-    await manager.broadcast(
+    backgroud_tasks.add_task(
+        manager.broadcast,
         db_company.id,
         {
             "type": "table_updated",
