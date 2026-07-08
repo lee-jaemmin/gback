@@ -438,12 +438,14 @@ async def register_purchase(
     if result == "USER NOT FOUND":
         raise HTTPException(status_code=404, detail="User not found")
 
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     return result
@@ -573,13 +575,14 @@ async def create_reservation(
     
     db_reservation = crud.create_reservation(db, reservation)
     # 만들어 놔야 밑에서 쓸 수가 있음. reservation은 Create 객체라서 쓸 수 없음. 필요한 필드가 없을 수 있음.
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     background_tasks.add_task
     (
         manager.broadcast,
         db_table.company_id, 
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     return db_reservation
@@ -616,12 +619,13 @@ async def update_reservation(
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     result =  crud.update_reservation(db, reservation_update, reservation_id)
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     return result
@@ -646,12 +650,13 @@ async def delete_reservation(
         raise HTTPException(status_code=404, detail="Reservation or Table not found")
 
     table = result
+    payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(table).model_dump(mode="json")
+            "payload": payload,
         }
     )
 
@@ -674,13 +679,13 @@ async def register_reservation (
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     return result
@@ -771,12 +776,13 @@ async def reservation_check_in (
         raise HTTPException(status_code=400, detail="Table is not available")
     if result is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         db_reservation.table.company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     return result
@@ -802,13 +808,13 @@ async def table_out(
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
-    
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast,
         company_id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+            "payload": payload,
         }
     )
     
@@ -907,12 +913,13 @@ async def reregister_history(
     if result == "History already re-registered":
         raise HTTPException(status_code=409, detail="History already re-registered")
     if result is True:
+        payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
         backgroud_tasks.add_task(
             manager.broadcast,
             db_table.company_id,
             {
                 "type": "table_updated",
-                "payload": schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+                "payload": payload,
             }
         )
         return {"message": "ReRegistered successfully"}
@@ -945,21 +952,22 @@ async def move_table (
         raise HTTPException(status_code=422, detail="FROM TABLE NOT USING")
     if result == "TO TABLE ALREADY IN USE":
         raise HTTPException(status_code=409, detail="TO TABLE ALREADY IN USE")
-    
+    payload = schemas.TableResponse.model_validate(result).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         db_company.id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(result).model_dump(mode="json")
+            "payload": payload
         }
     )
+    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
         db_company.id,
         {
             "type": "table_updated",
-            "payload": schemas.TableResponse.model_validate(db_from_table).model_dump(mode="json")
+            "payload": payload
         }
     )
     return {"message": "Table moved successfully"}
