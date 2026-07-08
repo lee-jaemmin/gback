@@ -29,25 +29,39 @@ def send_table_out_pushes(
 
     try:
         users = crud.get_users_by_company(db, company_id)
-        for user in users:
-            if not user.fcmtoken or user.is_push_on is False:
-                continue
-            try:
-                send_push_to_token(
-                    token=user.fcmtoken,
-                    title="테이블 아웃 알림",
-                    body=f"{tablename} 테이블이 아웃 처리되었습니다.",
-                    data={
-                        "type": "table_out",
-                        "table_id": table_id,
-                        "company_id": company_id,
-                        "tablename": tablename,
-                    },
-                )
-            except Exception as e:
-                print(f"푸시 발송 실패 user_id: {user.id}: {e}")
+        push_targets = [
+            {
+                "user_id": user.id,
+                "fcmtoken": user.fcmtoken
+            }
+            for user in users
+            if user.fcmtoken and user.is_push_on is not False
+        ]
     finally:
         db.close()
+
+    invalid_user_ids = []
+
+    for target in push_targets:
+        try:
+            send_push_to_token(
+                token=target['fcmtoken'],
+                title="테이블 아웃 알림",
+                body=f"{tablename} 테이블이 아웃 처리되었습니다.",
+                data={
+                    "type": "table_out",
+                    "table_id": table_id,
+                    "company_id": company_id,
+                    "tablename": tablename,
+                },
+            )
+        except Exception as e:
+            print(f"푸시 발송 실패 user_id: {target["user_id"]}: {e}")
+
+            if is_invalid_fcm_token_error(e):
+                invalid_user_ids.append(target["user_id"])
+
+    clear_invalid_fcm_tokens(invalid_user_ids)    
 
 
 def start_scheduler():
@@ -1026,9 +1040,7 @@ def run_expired_timer_check():
 
     try:
         expired_tables = crud.get_expired_timer_tables(db)
-
-        sent_count = 0
-        failed_count = 0
+        push_jobs = []
 
         for table in expired_tables:
             users = crud.get_users_by_company(db, table.company_id)
@@ -1038,55 +1050,68 @@ def run_expired_timer_check():
                 if not user.fcmtoken or user.is_push_on is False:
                     continue
 
-                try:
-                    send_push_to_token(
-                        token=user.fcmtoken,
-                        title="타이머 만료",
-                        body=f"⏰ {table.tablename} 테이블 시간이 만료되었습니다.",
-                        data={
-                            "type": "timer_expired",
-                            "table_id": table.id,
-                            "company_id": table.company_id,
-                            "tablename": table.tablename,
-                        },
-                    )
-                    sent_count += 1
-
-                except Exception as e:
-                    failed_count += 1
-                    print(f"타이머 푸시 실패 user_id={user.id}: {e}")
-
+                push_jobs.append(
+                    {
+                        "user_id": user.id,
+                        "fcmtoken": user.fcmtoken,
+                        "table_id": table.id,
+                        "company_id": table.company_id,
+                        "tablename": table.tablename
+                    }
+                )
             table.timer_alert_sent_at = datetime.now(UTC)
-            
-            
-
         db.commit()
-
-        if expired_tables:
-            print(
-                f"[Timer Check] expired={len(expired_tables)}, "
-                f"sent={sent_count}, failed={failed_count}"
-            )
-
-        return {
-            "expired_table_count": len(expired_tables),
-            "sent_count": sent_count,
-            "failed_count": failed_count,
-        }
-
     except Exception as e:
-        db.rollback()
-        print(f"[Timer Check Error] {e}")
+                db.rollback()
+                print(f"[Timer Check Error] {e}")
 
-        return {
-            "expired_table_count": 0,
-            "sent_count": 0,
-            "failed_count": 0,
-            "error": str(e),
-        }
-
+                return {
+                    "expired_table_count": 0,
+                    "sent_count": 0,
+                    "failed_count": 0,
+                    "error": str(e),
+                }
     finally:
         db.close()
+    
+    sent_count = 0
+    failed_count = 0
+    invalid_user_ids = []
+
+    for job in push_jobs:
+        try:
+            send_push_to_token(
+                token=user.fcmtoken,
+                title="타이머 만료",
+                body=f"⏰ {job['tablename']} 테이블 시간이 만료되었습니다.",
+                data={
+                    "type": "timer_expired",
+                    "table_id": job["table_id"],
+                    "company_id": job["company_id"],
+                    "tablename": job["tablename"]
+                },
+            )
+            sent_count += 1
+        except Exception as e:
+            failed_count += 1
+            print(f"타이머 푸시 실패 user_id={user.id}: {e}")
+
+            if is_invalid_fcm_token_error(e):
+                invalid_user_ids.append(job["user_id"])
+    
+    clear_invalid_fcm_tokens(invalid_user_ids)    
+
+    if expired_tables:
+        print(
+            f"[Timer Check] expired={len(expired_tables)}, "
+            f"sent={sent_count}, failed={failed_count}"
+        )
+
+    return {
+        "expired_table_count": len(expired_tables),
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+    }
 
 @app.get("/companies/{company_id}/notifications", response_model=list[schemas.NotificationResponse])
 def read_notifications_by_company(
@@ -1145,3 +1170,29 @@ def cache_menus(
         "items": db_items,
         "version": datetime.now(UTC)
     }
+# ========================
+# TOKEN
+# ========================
+def is_invalid_fcm_token_error(error: Exception) -> bool:
+    message = str(error)
+
+    return (
+        "NotRegistered" in message
+        or "Requested entity was not found" in message
+        or "Request contains an invalid argument" in message
+    )
+
+def clear_invalid_fcm_tokens(user_ids: list[str]):
+    if not user_ids:
+        return
+
+    db = SessionLocal()
+    try:
+        users = db.query(models.User).filter(models.User.id.in_(user_ids)).all()
+
+        for user in users:
+            user.fcmtoken = None
+
+        db.commit()
+    finally:
+        db.close()
