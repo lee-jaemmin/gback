@@ -788,7 +788,6 @@ async def reservation_check_in (
 async def table_out(
     table_id: str,
     background_tasks: BackgroundTasks,
-    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     db_table = crud.get_table(db, table_id)    
@@ -804,7 +803,7 @@ async def table_out(
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
     
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast,
         company_id,
         {
