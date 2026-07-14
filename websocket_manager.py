@@ -14,21 +14,22 @@ class ConnectionManager:
             f"[WS connect] company_id={company_id} "
             f"count={len(self.active_connections[company_id])}"
         )
-        # setdefault: company_id 없으면 만들어서 리스트 꺼내줌. 있으면 기존 리스트 꺼내줌
-        # 리스트: 웹소켓 리스트: 유저들의 웹소켓 리스트 (통로)
+        # if company_id not in self.active_connections:
+        #   self.active_connections[company_id] = []
+        # self.active_connections[company_id].append(websocket)
     
     def disconnect(self, company_id: str, websocket: WebSocket):
         connections = self.active_connections.get(company_id, [])
         # company_id있으면 그 리스트 반환
-        # 없으면 빈 리스트 반환
+        # 없으면 []
 
         if websocket in connections:
             connections.remove(websocket)
         
         if not connections:
             self.active_connections.pop(company_id, None)
-        # key인 company_id 삭제 후 그 value 반환
-        # key 없으면 None 반환
+        # connections리스트가 비었으면
+        # dict에서 회사 key를 삭제. None: key없을 때 터지지 말고 None반환하라는 뜻.
         print(f"[WS disconnect] company_id={company_id} count={len(connections)}")
 
     async def broadcast(self, company_id: str, message: dict):
@@ -43,8 +44,15 @@ class ConnectionManager:
                 return connection
 
         results = await asyncio.gather(
-            *(send(connection) for connection in list(connections))
+            *(send(connection) for connection in list(connections)) 
         )
+        # 보내는 중 원본 변경될 수도 있음. 그래서 원본 복사함 list(connections)
+        # *: 앞 작업들 풀어서 넣기
+        # asyncio.gather(
+        #     send(websocket1),
+        #     send(websocket2),
+        #     send(websocket3),
+        # )
         stale_connections = [
             connection for connection in results if connection is not None
         ]

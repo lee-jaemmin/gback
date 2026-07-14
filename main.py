@@ -1031,12 +1031,12 @@ def debug_scheduler():
         )
 
     return {
-        "running": scheduler.running,
+        "running": scheduler.running, # true / false
         "jobs": jobs,
     }
 
 def run_expired_timer_check():
-    db = SessionLocal()
+    db = SessionLocal() # 스케줄러: http 요청 아님. 그래서 직접 db 연결을 만든다.
 
     try:
         expired_tables = crud.get_expired_timer_tables(db)
@@ -1081,7 +1081,7 @@ def run_expired_timer_check():
     for job in push_jobs:
         try:
             send_push_to_token(
-                token=user.fcmtoken,
+                token=job['fcmtoken'],
                 title="타이머 만료",
                 body=f"⏰ {job['tablename']} 테이블 시간이 만료되었습니다.",
                 data={
