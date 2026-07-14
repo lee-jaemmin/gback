@@ -1161,7 +1161,7 @@ def cache_menus(
         company_id: str,
         db: Session = Depends(get_db)
 ):
-    db_categories = crud.get_item_categories(db) # 객체 리스트 반환: temCategory(id=1, category_name="주류", sort_order=1),
+    db_categories = crud.get_item_categories(db) # 객체 리스트 반환: itemCategory(id=1, category_name="주류", sort_order=1),
     db_items = crud.get_items_by_company(company_id, db)
 
     return {
