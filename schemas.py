@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
+from decimal import Decimal
 
 # API 명세서
 # 요청 데이터는 ~~해야 한다. ex. id는 str이어야한다 등
@@ -87,6 +88,11 @@ class TableBase(BaseModel):
     persons: int = 0
     remark: str = ""
 
+    position_x: Decimal = 0
+    position_y: Decimal = 0
+    width: int = 0
+    height: int = 0
+
     total_price: int = 0
     registered_at: Optional[datetime] = None
     timer_started_at: Optional[datetime] = None
@@ -116,6 +122,11 @@ class TableUpdate(BaseModel):
 
     total_price: Optional[int] = None
     registered_at: Optional[datetime] = None
+
+    position_x: Optional[Decimal] = None
+    position_y: Optional[Decimal] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
 
     user_id: Optional[str] = None
     user_name: Optional[str] = None
