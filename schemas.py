@@ -88,8 +88,8 @@ class TableBase(BaseModel):
     persons: int = 0
     remark: str = ""
 
-    position_x: Decimal = 0
-    position_y: Decimal = 0
+    position_x: float = 0
+    position_y: float = 0
     width: int = 0
     height: int = 0
 
@@ -123,8 +123,8 @@ class TableUpdate(BaseModel):
     total_price: Optional[int] = None
     registered_at: Optional[datetime] = None
 
-    position_x: Optional[Decimal] = None
-    position_y: Optional[Decimal] = None
+    position_x: Optional[float] = None
+    position_y: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None
 
