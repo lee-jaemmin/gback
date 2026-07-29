@@ -251,13 +251,6 @@ def read_tables_by_company(
         return crud.get_tables_by_company_and_section(db, company_id, section)
     return crud.get_tables_by_company(db, company_id)
     
-@app.get("/table-groups/{group_id}/tables", response_model=list[schemas.TableResponse])
-def read_tables_by_group(
-    group_id: str,
-    db: Session = Depends(get_db)  
-):
-    return crud.get_tables_by_group(db, group_id)
-
 @app.patch("/tables/{table_id}", response_model=schemas.TableResponse)
 async def update_table(
     table_id: str,

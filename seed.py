@@ -82,13 +82,10 @@ def seed():
                     remark="",
                     total_price=0,
                     registered_at=None,
-                    ismaster=False,
-                    mastertable_id=None,
                     timer_started_at=None,
                     company_id="company_1",
                     user_id=None,
                     user_name=None,
-                    group_id=None,
                     is_reserved=False,
                 )
                 db.add(table)

@@ -198,7 +198,6 @@ def create_table(db: Session, table: TableCreate):
         company_id = table.company_id,
         user_id = table.user_id,
         user_name = table.user_name,
-        group_id = table.group_id,
     )
 
     db.add(db_table)
@@ -226,9 +225,6 @@ def get_tables_by_company_and_section(
         )
         .all()
     )
-
-def get_tables_by_group(db: Session, group_id: str):
-    return db.query(TableMaster).filter(TableMaster.group_id == group_id).all()
 
 def update_table(db: Session, table_update: TableUpdate, table_id: str):
     db_table = get_table(db, table_id)
@@ -278,7 +274,6 @@ def create_tables_for_company(
                     company_id = company_id,
                     user_id = None,
                     user_name = None,
-                    group_id = None,
                 )
             )
     db.add_all(default_tables)
@@ -1051,9 +1046,6 @@ def table_out(
     for purchase in db_purchases:
         db.delete(purchase)
 
-    # 만약 아웃된 애가 마스터라면
-    ## 테이블 그룹 crud를 만들기 ## 
-
     db_log = get_purchase_logs(db, table_id)
     for log in db_log:
         db.delete(log)
@@ -1067,9 +1059,6 @@ def table_out(
     db_table.total_price = 0
     db_table.purchase_summary = []
     db_table.registered_at = None
-    db_table.ismaster = False
-    db_table.mastertable_id = None 
-    db_table.group_id = None 
     db_table.user_id = None 
     db_table.user_name = None
     db_table.timer_started_at = None
@@ -1235,10 +1224,7 @@ def reset_daily_state(db: Session):
                 TableMaster.purchase_summary: [],
                 TableMaster.registered_at: None,
                 TableMaster.user_id: None,
-                TableMaster.user_name: None,              
-                TableMaster.group_id: None,
-                TableMaster.ismaster: False,
-                TableMaster.mastertable_id: None,
+                TableMaster.user_name: None,
                 TableMaster.is_reserved: False,
                 TableMaster.timer_started_at: None,
                 TableMaster.timer_end_at: None,
@@ -1312,4 +1298,3 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     
     db.commit()
     return db_to
-

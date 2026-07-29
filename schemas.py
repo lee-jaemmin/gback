@@ -94,9 +94,7 @@ class TableBase(BaseModel):
     timer_alert_sent_at: Optional[datetime] = None
     reserved_at: Optional[datetime] = None
 
-    ismaster: bool = False
     is_reserved: bool = False
-    mastertable_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
 
 
@@ -104,7 +102,6 @@ class TableCreate(TableBase):
     company_id: str
     user_id: Optional[str] = None
     user_name: Optional[str] = None
-    group_id: Optional[str] = None
 
 
 class TableUpdate(BaseModel):
@@ -122,10 +119,6 @@ class TableUpdate(BaseModel):
 
     user_id: Optional[str] = None
     user_name: Optional[str] = None
-    group_id: Optional[str] = None
-
-    ismaster: Optional[bool] = None
-    mastertable_id: Optional[str] = None
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None
     timer_alert_sent_at: Optional[datetime] = None
@@ -139,8 +132,6 @@ class TableResponse(TableBase):
     company_id: str
     user_id: Optional[str] = None
     user_name: Optional[str] = None
-    group_id: Optional[str] = None
-
     created_at: datetime
     updated_at: datetime
 
@@ -359,36 +350,6 @@ class ReservationInputCreate(ReservationInputBase):
     customer_name: str
     customer_phone: str
     purchases: list[ReservationInputBase] = []
-
-
-# =========================
-# TableGroup
-# 합석 그룹
-# =========================
-
-class TableGroupCreate(BaseModel):
-    id: str
-    master_table_id: str
-    tables_ids: list[str]
-    company_id: str
-
-
-class TableGroupUpdate(BaseModel):
-    master_table_id: Optional[str] = None
-    tables_ids: Optional[list[str]] = None
-    closed_at: Optional[datetime] = None
-
-
-class TableGroupResponse(BaseModel):
-    id: str
-    master_table_id: str
-    company_id: str
-
-    created_at: datetime
-    closed_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 
 # =========================
