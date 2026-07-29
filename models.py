@@ -3,6 +3,7 @@ from sqlalchemy import (
     Integer,
     String,
     Boolean,
+    Numeric,
     DateTime,
     Date,
     ForeignKey,
@@ -35,7 +36,6 @@ class Company(Base):
     users = relationship("User", back_populates="company")
     tables = relationship("TableMaster", back_populates="company")
     items = relationship("Item", back_populates="company")
-    table_groups = relationship("TableGroup", back_populates="company")
 
 
 class User(Base):
@@ -79,9 +79,11 @@ class TableMaster(Base):
     total_price = Column(Integer, default=0, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
 
-    ismaster = Column(Boolean, default=False, nullable=True)
-    mastertable_id = Column(String, nullable=True)
-    
+    position_x = Column(Numeric, default=0, nullable=False)
+    position_y = Column(Numeric, default=0, nullable=False)
+    width = Column(Integer, default=10, nullable=False)
+    height = Column(Integer, default=10, nullable=False)
+
     is_reserved = Column(Boolean, default=False)
     timer_started_at = Column(DateTime(timezone=True), nullable=True)
     timer_end_at = Column(DateTime(timezone=True), nullable=True, index=True)
@@ -93,7 +95,6 @@ class TableMaster(Base):
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     user_name = Column(String, nullable=True)
-    group_id = Column(String, ForeignKey("table_groups.id"), nullable=True)
     purchase_summary = Column(JSON, nullable=True)
 
     company = relationship("Company", back_populates="tables")
@@ -110,46 +111,6 @@ class TableMaster(Base):
         back_populates="table",
         cascade="all, delete-orphan",
     )
-
-    group = relationship(
-        "TableGroup",
-        foreign_keys=[group_id],
-        back_populates="tables",
-    )
-
-    mastered_group = relationship(
-        "TableGroup",
-        foreign_keys="TableGroup.master_table_id",
-        back_populates="master_table",
-        uselist=False,
-    )
-
-
-class TableGroup(Base):
-    __tablename__ = "table_groups"
-
-    id = Column(String, primary_key=True, index=True)
-
-    master_table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
-
-    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    closed_at = Column(DateTime(timezone=True), nullable=True)
-
-    master_table = relationship(
-        "TableMaster",
-        foreign_keys=[master_table_id],
-        back_populates="mastered_group",
-    )
-
-    tables = relationship(
-        "TableMaster",
-        foreign_keys="TableMaster.group_id",
-        back_populates="group",
-    )
-
-    company = relationship("Company", back_populates="table_groups")
-
 
 class ItemCategory(Base):
     __tablename__ = "item_categories"
