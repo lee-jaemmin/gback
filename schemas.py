@@ -102,6 +102,7 @@ class TableBase(BaseModel):
 
     bid_end_at: Optional[datetime] = None
     bid_available: Optional[bool] = False
+    least_bid_price: int = 0
 
     is_reserved: bool = False
     purchase_summary: Optional[list[str]] = None
@@ -138,6 +139,7 @@ class TableUpdate(BaseModel):
     timer_alert_sent_at: Optional[datetime] = None
     bid_end_at: Optional[datetime] = None
     bid_available: Optional[bool] = None
+    least_bid_price: Optional[int] = 0
     is_reserved: Optional[bool] = None
     company_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
