@@ -268,6 +268,7 @@ class TableHistory(Base):
     user_id = Column(String, default="", nullable=False)
     user_name = Column(String, default="", nullable=False)
     company_id = Column(String, nullable=False)
+    
 
     registered_at = Column(DateTime(timezone=True), nullable=True)
     out_at = Column(DateTime(timezone=True), nullable=False)
@@ -276,6 +277,7 @@ class TableHistory(Base):
     re_registered_at = Column(DateTime(timezone=True), nullable=True)
     re_registered_table_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    purchase_summary = Column(String, nullable=True)
 
     table_history_purchases = relationship(
         "TableHistoryPurchase",

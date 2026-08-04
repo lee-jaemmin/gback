@@ -1063,6 +1063,7 @@ def table_out(
         out_at = out_at,
         business_date = get_business_date(business_date_source),
         closed_reason = closed_reason,
+        purchase_summary = db_table.purchase_summary,
     )
 
     db.add(db_history)
@@ -1191,6 +1192,7 @@ def reregister_table(
     db_table.remark = f"{db_history.tablename}번 재등록" if not db_history.remark else f"{db_history.remark}, {db_history.tablename}번 재등록" 
     db_table.status = "inuse"
     db_table.registered_at = db_history.registered_at
+    db_table.purchase_summary = db_history.purchase_summary,
     # 구매 정보 옮기기
     for hp in db_history_purchases:
         db_purchase = TablePurchase(

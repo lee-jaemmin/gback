@@ -431,6 +431,7 @@ class TableHistoryBase(BaseModel):
     closed_reason: str = "manual_out"
     re_registered_at: Optional[datetime] = None
     re_registered_table_id: Optional[str] = None
+    purchase_summary: Optional[str]
 
 
 class TableHistoryCreate(TableHistoryBase):
