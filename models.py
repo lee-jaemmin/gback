@@ -27,7 +27,8 @@ class Company(Base):
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False)
     invite_code = Column(String, unique=True, nullable=True, index=True)
-    region = Column(String, nullable=False)
+    region = Column(String, nullable=True)
+    address = Column(String, nullable=False)
     sections = Column(JSON, nullable=False, default=lambda: ['A', 'B', 'C', 'D', 'E'])
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
@@ -92,6 +93,9 @@ class TableMaster(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
+    bid_end_at = Column(DateTime(timezone=True), nullable=True)
+    bid_available = Column(Boolean, default=False)
+
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     user_name = Column(String, nullable=True)
@@ -111,6 +115,22 @@ class TableMaster(Base):
         back_populates="table",
         cascade="all, delete-orphan",
     )
+
+class BidList(Base):
+    __tablename__ = "bid_list"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    company_name = Column(String, nullable=False)
+    user_name = Column(String, nullable=False)
+    user_phonenumber = Column(String, nullable=False)
+    bid_price = Column(Integer, nullable=False)
+
+
+    #FK
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+
 
 class ItemCategory(Base):
     __tablename__ = "item_categories"
