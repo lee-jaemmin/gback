@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
 from models import ( 
             Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
-            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification
+            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification, BidList
         )
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
             ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, ReservationInputCreate,
-            NotificationCreate, NotificationResponse
+            BidListCreate, BidListUpdate
         )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -56,7 +56,7 @@ def recalculate_res_table_total_price(db: Session, table_id: str):
     return db_table
 
 # ========================
-# Company
+# COMPANY
 # ========================
 def create_company(db: Session, company: CompanyCreate):
     invite_code = generate_invitation_code(db)
@@ -65,6 +65,7 @@ def create_company(db: Session, company: CompanyCreate):
         id=str(uuid.uuid4()),
         name=company.name,
         region=company.region,
+        address=company.address,
         invite_code=invite_code,
     )
 
@@ -131,7 +132,7 @@ def regenerate_invite_code(db: Session, company_id: str):
     
 
 # ========================
-# User
+# USER
 # ========================
 def create_user(db: Session, user: UserCreate):
     db_user = User(
@@ -182,7 +183,7 @@ def delete_user(db: Session, user_id: str):
     db.commit()
     return True
 # ========================
-# Table
+# TABLE
 # ========================
 def create_table(db: Session, table: TableCreate):
     db_table = TableMaster(
@@ -198,6 +199,8 @@ def create_table(db: Session, table: TableCreate):
         company_id = table.company_id,
         user_id = table.user_id,
         user_name = table.user_name,
+        bid_end_at = table.bid_end_at,
+        bid_available = table.bid_available,
     )
 
     db.add(db_table)
@@ -290,7 +293,52 @@ def get_expired_timer_tables(db: Session):
     ).all()
 
 # ========================
-# ItemCategory
+# BIDLIST
+# ========================
+def create_bid_list(db: Session, bid: BidListCreate):
+    db_bid = BidList(
+        company_id = bid.company_id,
+        company_name = bid.company_name,
+        table_id = bid.table_id,
+        user_id = bid.user_id,
+        user_name = bid.user_name,
+        user_phonenumber = bid.user_phonenumber,
+        bid_price = bid.bid_price,
+    )
+
+    db.add(db_bid)
+    db.commit()
+    db.refresh(db_bid)
+    return db_bid
+
+def get_bid_list(db: Session, bid_id: int):
+    return db.query(BidList).filter(BidList.id == bid_id).first()
+
+def get_bid_list_by_table(db: Session, table_id: str):
+    return db.query(BidList).filter(BidList.table_id == table_id).all()
+
+def update_bid_list(db: Session, update_bid: BidListUpdate, bid_id: int):
+    db_bid = get_bid_list(db, bid_id)
+    if db_bid is None:
+        return None
+    update_data = update_bid.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(db_bid, key, value)
+    db.commit()
+    db.refresh(db_bid)
+    return db_bid
+
+def delete_bid_list(db: Session, bid_id: int):
+    db_bid = get_bid_list(db, bid_id)
+    if db_bid is None:
+        return None
+    db.delete(db_bid)
+    return True
+
+
+# ========================
+# ITEMCATEGORY
 # ========================
 def create_item_category(db: Session, category: ItemCategoryCreate):
     db_category = ItemCategory (
@@ -532,7 +580,7 @@ def build_purchase_summary(db: Session, table_id: str) -> list[str]:
     return summary        
 
 # ========================
-# TablePurchaseLog
+# TABLEPURCHASELOG
 # ========================
 def create_purchase_log(
         db: Session,
@@ -708,7 +756,7 @@ def register_purchase(
     
 
 # ========================
-# Reservation
+# RESERVATION
 # ========================
 def create_reservation(
         db: Session,
@@ -1164,7 +1212,7 @@ def reregister_table(
     return True
 
 # ========================
-# Notification
+# NOTIFICATION
 # ========================
 def create_timer_notification (
         db: Session,
@@ -1190,7 +1238,7 @@ def get_notification_by_company(
 
 
 # ========================
-# Reset
+# RESET
 # ========================
 
 def reset_daily_state(db: Session):
@@ -1241,7 +1289,7 @@ def reset_daily_state(db: Session):
         raise
 
 # ========================
-# Move
+# MOVE
 # ========================
 def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_from = get_table(db, from_table_id)
