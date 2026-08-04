@@ -1,20 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
-from decimal import Decimal
 
 # API 명세서
 # 요청 데이터는 ~~해야 한다. ex. id는 str이어야한다 등
 # 요청 데이터 -> python 객체
 
 # =========================
-# Company
+# COMPANY
 # =========================
 
 class CompanyBase(BaseModel):
     name: str
-    region: str
-    
+    address: str
+    region: str = ""
 
 class CompanyCreate(CompanyBase):
     pass
@@ -23,6 +22,7 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
     region: Optional[str] = None
+    address: Optional[str] = None
     sections: Optional[list[str]] = None
 
 class CompanyResponse(CompanyBase):
@@ -37,7 +37,7 @@ class CompanyResponse(CompanyBase):
 
 
 # =========================
-# User
+# USER
 # =========================
 
 class UserBase(BaseModel):
@@ -75,7 +75,7 @@ class UserResponse(UserBase):
 
 
 # =========================
-# TableMaster
+# TABLEMASTER
 # =========================
 
 class TableBase(BaseModel):
@@ -99,6 +99,9 @@ class TableBase(BaseModel):
     timer_end_at: Optional[datetime] = None
     timer_alert_sent_at: Optional[datetime] = None
     reserved_at: Optional[datetime] = None
+
+    bid_end_at: Optional[datetime] = None
+    bid_available: Optional[bool] = False
 
     is_reserved: bool = False
     purchase_summary: Optional[list[str]] = None
@@ -133,6 +136,8 @@ class TableUpdate(BaseModel):
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None
     timer_alert_sent_at: Optional[datetime] = None
+    bid_end_at: Optional[datetime] = None
+    bid_available: Optional[bool] = None
     is_reserved: Optional[bool] = None
     company_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
@@ -151,7 +156,44 @@ class TableResponse(TableBase):
 
 
 # =========================
-# ItemCategory
+# BIDLIST
+# =========================
+
+class BidListBase(BaseModel):
+    company_name: str
+    user_name: str
+    user_phonenumber: str
+    bid_price: int
+
+    company_id: str
+    table_id: str
+    user_id: str
+
+
+class BidListCreate(BidListBase):
+    pass
+
+
+class BidListUpdate(BaseModel):
+    company_name: Optional[str] = None
+    user_name: Optional[str] = None
+    user_phonenumber: Optional[str] = None
+    bid_price: Optional[int] = None
+
+    company_id: Optional[str] = None
+    table_id: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+class BidListResponse(BidListBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# ITEMCATEGORY
 # =========================
 
 class ItemCategoryCreate(BaseModel):
@@ -177,7 +219,7 @@ class ItemCategoryResponse(BaseModel):
 
 
 # =========================
-# Item
+# ITEM
 # =========================
 
 class ItemBase(BaseModel):
@@ -210,7 +252,7 @@ class ItemResponse(ItemBase):
 
 
 # =========================
-# TablePurchase
+# TABLEPURCHASE
 # 현재 테이블에서 실제 주문한 상품
 # =========================
 
@@ -245,7 +287,7 @@ class TablePurchaseResponse(BaseModel):
         from_attributes = True
 
 # =========================
-# TablePurchaseLog
+# TABLEPURCHASELOG
 # 현재 테이블에서 실제 주문한 상품
 # =========================
 
@@ -284,7 +326,7 @@ class TablePurchaseLogResponse(BaseModel):
 
 
 # =========================
-# Reservation
+# RESERVATION
 # =========================
 
 class ReservationBase(BaseModel):
@@ -315,7 +357,7 @@ class ReservationResponse(ReservationBase):
 
 
 # =========================
-# ReservationPurchase
+# RESERVATIONPURCHASE
 # =========================
 
 class ReservationPurchaseCreate(BaseModel):
@@ -349,7 +391,7 @@ class ReservationPurchaseResponse(BaseModel):
         from_attributes = True
 
 # =========================
-# ReservationInput
+# RESERVATIONINPUT
 # =========================
 
 class ReservationInputBase(BaseModel):
@@ -364,7 +406,7 @@ class ReservationInputCreate(ReservationInputBase):
 
 
 # =========================
-# TableHistory
+# TABLEHISTORY
 # 테이블 아웃 당시 스냅샷
 # =========================
 
@@ -401,7 +443,7 @@ class TableHistoryResponse(TableHistoryBase):
         from_attributes = True
 
 # =========================
-# TableHistoryPurchase
+# TABLEHISTORYPURCHASE
 # =========================
 class TableHistoryPurchaseBase(BaseModel):
     history_id: int
@@ -420,7 +462,7 @@ class TableHistoryPurchaseResponse(TableHistoryPurchaseBase):
 
 
 # =========================
-# Notifications
+# NOTIFICATIONS
 # =========================
 class NotificationCreate(BaseModel):
     company_id: str

@@ -7,7 +7,10 @@ from models import (
     ItemCategory,
     Item,
 )
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
+from zoneinfo import ZoneInfo
+
+KST = ZoneInfo("Asia/Seoul")
 
 def utc_now():
     return datetime.now(UTC)
@@ -29,8 +32,9 @@ def seed():
         if company is None:
             company = Company(
                 id="company_1",
-                name="테스트매장",
+                name="테이블비드1",
                 region="이태원",
+                address="서울시 용산구 우사단로 10길 9",
                 invite_code="GRID01",
                 sections = ['A', 'B', 'C', 'D', 'E']
             )
@@ -39,15 +43,15 @@ def seed():
         # -------------------------
         # User
         # -------------------------
-        user = db.query(User).filter(User.id == "or0VV3Fx9pO4pvaygGKrgR36rpq1").first()
+        user = db.query(User).filter(User.id == "4pB5xej3AdT5sL4koRJhny2jZVo1").first()
 
         if user is None:
             user = User(
-                id="or0VV3Fx9pO4pvaygGKrgR36rpq1",
-                username="DEVACC",
-                email="devacc@naver.com",
+                id="4pB5xej3AdT5sL4koRJhny2jZVo1",
+                username="tb1",
+                email="tb1@dev.com",
                 role="owner",
-                fcmtoken="dSVnvn0deUUBrYLy4hHmTx:APA91bE5VWPEUnp5HVBvRRfOQzpww9zOm8uye8ytCDg0IZ28Lao9aUsPdQU99ZF8kqXZU7V31daoCbjugTKnclHMc1yNOreUpRHFRTQBxXnJk2f8G5t0il8",
+                fcmtoken="fkcA0tVDxk5GqBS_7Z5iq6:APA91bE29fyBnzrDri2oqhfB1ZRdDpeEN-f1lpBYrBoM0qZuXV0-0Lvjz012c1WGe_nh7uuCc4H-RyWSvR0Uvzq4jHkhm0RqALbEbQ8S0oVgUi60Papo_Q0",
                 tablecardfields=["purchases", "persons"],
                 company_id="company_1",
             )
@@ -66,6 +70,11 @@ def seed():
             ("VIP1", "vip"),
             ("VIP2", "vip"),
         ]
+
+        now = datetime.now(KST)
+        bid_end_at = now.replace(hour=22, minute=0, second=0, microsecond=0)
+        if bid_end_at <= now:
+            bid_end_at += timedelta(days=1)
 
         for table_id, section in table_names:
             table = db.query(TableMaster).filter(TableMaster.id == table_id).first()
@@ -87,8 +96,13 @@ def seed():
                     user_id=None,
                     user_name=None,
                     is_reserved=False,
+                    bid_available=True,
+                    bid_end_at=bid_end_at,
                 )
-                db.add(table)
+
+            table.bid_available = True
+            table.bid_end_at = bid_end_at
+            db.add(table)
 
         # -------------------------
         # ItemCategory

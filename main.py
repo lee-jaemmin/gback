@@ -56,13 +56,12 @@ def send_table_out_pushes(
                 },
             )
         except Exception as e:
-            print(f"푸시 발송 실패 user_id: {target["user_id"]}: {e}")
+            print(f"푸시 발송 실패 user_id: {target['user_id']}: {e}")
 
             if is_invalid_fcm_token_error(e):
-                invalid_user_ids.append(target["user_id"])
+                invalid_user_ids.append(target['user_id'])
 
     clear_invalid_fcm_tokens(invalid_user_ids)    
-
 
 def start_scheduler():
     if scheduler.running:
@@ -101,7 +100,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # =====================
-# Company API
+# COMPANY API
 # =====================
 @app.post("/companies", response_model=schemas.CompanyResponse)
 def create_company(
@@ -163,7 +162,7 @@ def regenerate_invite_code (
 
 
 # =====================
-# User API
+# USER API
 # =====================
 
 @app.post("/users", response_model=schemas.UserResponse)
@@ -216,7 +215,7 @@ def delete_user (
     return {"message": "User deleted successfully"}
 
 # =====================
-# Table API
+# TABLE API
 # =====================
 
 @app.post("/tables", response_model=schemas.TableResponse)
@@ -289,8 +288,60 @@ def delete_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return {"message": "Table deleted successfully"}
 
+
 # =====================
-# Category API
+# BIDLIST API
+# =====================
+@app.post("/bid-lists", response_model=schemas.BidListResponse)
+def create_bid_list(
+    bid: schemas.BidListCreate,
+    db: Session = Depends(get_db)
+):
+    return crud.create_bid_list(db, bid)
+
+@app.get("/bid-lists/{bid_id}", response_model=schemas.BidListResponse)
+def read_bid_list (
+    bid_id: int,
+    db: Session = Depends(get_db)
+):
+    db_bid = crud.get_bid_list(db, bid_id)
+    if db_bid is None:
+        raise HTTPException(status_code=404, detail="BID NOT FOUND")
+    return db_bid
+
+@app.get("/tables/{table_id}/bid-lists", response_model=list[schemas.BidListResponse])
+def read_bid_lists (
+    table_id: str,
+    db: Session = Depends(get_db)
+):
+    db_bid = crud.get_bid_list_by_table(db, table_id)
+    if db_bid is None:
+        raise HTTPException(status_code=404, detail="BID NOT FOUND ON TABLE")
+    return db_bid
+
+@app.get("/bid-lists/{bid_id}", response_model=schemas.BidListResponse)
+def update_bid_list (
+    bid_id: int,
+    db: Session = Depends(get_db)
+):
+    db_bid = crud.update_bid_list(db, bid_id)
+    if db_bid is None:
+        raise HTTPException(status_code=404, detail="BID NOT FOUND")
+    return db_bid
+
+@app.delete("/bid-list/{bid_id}")
+def delete_bid (
+    bid_id: int,
+    db: Session = Depends(get_db)
+):
+    result = crud.delete_bid_list(db, bid_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Bid not found")
+    if result is True:
+        return {"message": "Bid deleted successfully"}
+
+# =====================
+# CATEGORY API
 # =====================
 @app.post("/categories", response_model=schemas.ItemCategoryResponse)
 def create_category(
@@ -395,7 +446,7 @@ def delete_item (
         return {"message": "Item deleted successfully"}
     
 # =====================
-# Purchase API
+# PURCHASE API
 # =====================
 @app.post("/purchases", response_model=schemas.TablePurchaseResponse)
 async def create_purchase(
@@ -504,7 +555,7 @@ def delete_purchase (
         raise HTTPException(status_code=404, detail="Purchase not found")
     
 # =====================
-# TablePurchaseLog API
+# TABLEPURCHASELOG API
 # =====================
 @app.post("/purchase-log", response_model=schemas.TablePurchaseLogResponse)
 def create_purchase_log(
@@ -568,7 +619,7 @@ def delete_log_and_purchase (
     raise HTTPException(status_code=500, detail="Failed to delete log and purchase")
 
 # =====================
-# Reservation API
+# RESERVATION API
 # =====================
 @app.post("/reservations", response_model=schemas.ReservationResponse)
 async def create_reservation(
@@ -699,7 +750,7 @@ async def register_reservation (
     
 
 # =====================
-# ReservationPurchase API
+# RESERVATIONPURCHASE API
 # =====================
 @app.post("/res-purchases", response_model=schemas.ReservationPurchaseResponse)
 def create_res_purchase(
@@ -795,7 +846,7 @@ async def reservation_check_in (
     return result
 
 # =====================
-# History API
+# HISTORY API
 # =====================
 @app.post("/tables/{table_id}/out", response_model=schemas.TableHistoryResponse)
 async def table_out(
@@ -867,7 +918,7 @@ def read_histories_by_company(
     )
     
 # =====================
-# HistoryPurchase API
+# HISTORYPURCHASE API
 # =====================
 
 @app.get("/history-purchases/{history_purchase_id}", response_model=schemas.TableHistoryPurchaseResponse)
@@ -933,7 +984,7 @@ async def reregister_history(
     raise HTTPException(status_code=500, detail=f"Error: {result}")
 
 # =====================
-# MoveAPI
+# MOVEAPI
 # =====================
 @app.post("/table-move" )
 async def move_table (
@@ -983,7 +1034,7 @@ async def move_table (
 
 
 # =====================
-# Notification
+# NOTIFICATION
 # =====================
 
 @app.post("/debug/push")
@@ -1129,7 +1180,7 @@ def run_daily_reset():
 start_scheduler()
 
 # =====================
-# Websocket
+# WEBSOCKET
 # =====================
 @app.websocket("/ws/companies/{company_id}")
 async def websocket_company(websocket: WebSocket, company_id: str):
