@@ -277,7 +277,7 @@ class TableHistory(Base):
     re_registered_at = Column(DateTime(timezone=True), nullable=True)
     re_registered_table_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    purchase_summary = Column(String, nullable=True)
+    purchase_summary = Column(JSON, nullable=True)
 
     table_history_purchases = relationship(
         "TableHistoryPurchase",
