@@ -1210,6 +1210,7 @@ def reregister_table(
     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db_history.re_registered_at = datetime.now(UTC)
     db_history.re_registered_table_id = db_table.id
+    db.delete(db_history)
     db.commit()
     return True
 
