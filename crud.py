@@ -1310,6 +1310,15 @@ def reset_daily_state(db: Session):
         # 현재 테이블 구매 내역 삭제
         db.query(TablePurchase).delete(synchronize_session=False)
 
+        now_kst = datetime.now(KST)
+        bid_end_at = now_kst.replace(
+            hour=22,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        if bid_end_at <= now_kst:
+            bid_end_at += timedelta(days=1)
         # 테이블 마스터 초기화
         db.query(TableMaster).update(
             {
@@ -1327,6 +1336,7 @@ def reset_daily_state(db: Session):
                 TableMaster.timer_started_at: None,
                 TableMaster.timer_end_at: None,
                 TableMaster.timer_alert_sent_at: None,
+                TableMaster.bid_end_at: bid_end_at,
             },
             synchronize_session=False,
         )
