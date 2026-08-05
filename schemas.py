@@ -429,6 +429,7 @@ class ReservationPurchaseResponse(BaseModel):
 class ReservationInputBase(BaseModel):
     item_id: int = 0
     quantity: int = 1
+    bid_price: Optional[int]
 
 class ReservationInputCreate(ReservationInputBase):
     reservation_time: datetime

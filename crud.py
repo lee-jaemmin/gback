@@ -954,15 +954,14 @@ def register_reservation(
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
-    if db_table.is_reserved is True:
-        return "Table already reserved"
     db_table.is_reserved = True
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
         table_id = table_id,
         reservation_time = reservation_input.reservation_time,
         customer_name = reservation_input.customer_name,
-        customer_phone = reservation_input.customer_phone
+        customer_phone = reservation_input.customer_phone,
+        bid_price = reservation_input.bid_price, # 가격만 입력 시
     )
     db.add(db_reservation)
     db.flush()
