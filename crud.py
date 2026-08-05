@@ -811,6 +811,8 @@ def update_reservation(
         db_reservation.customer_name = reservation_update.customer_name
     if reservation_update.customer_phone is not None:
         db_reservation.customer_phone = reservation_update.customer_phone
+    if reservation_update.bid_price is not None:
+        db_reservation.bid_price = reservation_update.bid_price
     
     db.commit()
     db.refresh(db_reservation)

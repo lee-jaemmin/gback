@@ -364,6 +364,7 @@ class ReservationBase(BaseModel):
     reservation_time: datetime
     customer_name: str
     customer_phone: str = ""
+    bid_price: Optional[int] = 0
 
 
 class ReservationCreate(ReservationBase):
@@ -374,7 +375,7 @@ class ReservationUpdate(BaseModel):
     reservation_time: Optional[datetime] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
-
+    bid_price: Optional[int] = None
 
 class ReservationResponse(ReservationBase):
     id: int
