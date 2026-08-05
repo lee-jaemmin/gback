@@ -428,13 +428,13 @@ class ReservationPurchaseResponse(BaseModel):
 
 class ReservationInputBase(BaseModel):
     item_id: int = 0
-    quantity: int = 1
-    bid_price: Optional[int]
+    quantity: int = 0
 
 class ReservationInputCreate(ReservationInputBase):
     reservation_time: datetime
     customer_name: str
     customer_phone: str
+    bid_price: Optional[int]
     purchases: list[ReservationInputBase] = []
 
 
