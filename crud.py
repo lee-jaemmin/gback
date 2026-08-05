@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
 from models import ( 
             Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
-            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification, BidList
+            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification, BidList, LogHistory
         )
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
             ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, ReservationInputCreate,
-            BidListCreate, BidListUpdate
+            BidListCreate, BidListUpdate, LogHistoryCreate, LogHistoryResponse
         )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -1098,9 +1098,22 @@ def table_out(
     for purchase in db_purchases:
         db.delete(purchase)
 
-    db_log = get_purchase_logs(db, table_id)
-    for log in db_log:
-        db.delete(log)
+    db_logs = get_purchase_logs(db, table_id)
+    for log in db_logs:
+        db_log_history = LogHistory (
+            history_id = db_history.id,
+            table_id = log.table_id,
+            item_id = log.item_id,
+            item_name = log.item_name,
+            batch_id = log.batch_id,
+            user_id = log.user_id,
+            user_name = log.user_name,
+            quantity = log.quantity,
+            unit_price = log.unit_price,
+            total_price = log.quantity * log.unit_price
+        )
+        db.add(db_log_history)
+        db.flush()
 
     # 테이블 초기화
     db_table.status = 'available'
@@ -1187,6 +1200,10 @@ def reregister_table(
     
     if db_table.status == "inuse":
         return "Table already in use"
+
+    db_log_histories = get_log_histories(db, db_history.id)
+    if not db_log_histories:
+        return "Log not found"
     
     # 일반 정보 옮기기
     db_table.customer = db_history.customer_name
@@ -1210,6 +1227,22 @@ def reregister_table(
     total_price = sum(hp.unit_price * hp.quantity for hp in db_history_purchases)
     db_table.total_price = total_price
     db.flush()
+
+    # 로그 옮기기
+    for log in db_log_histories:
+        db_log = TablePurchaseLog(
+            table_id = db_table.id,
+            item_id = log.item_id,
+            item_name = log.item_name,
+            batch_id = log.batch_id,
+            user_id = log.user_id,
+            user_name = log.user_name,
+            quantity = log.quantity,
+            unit_price = log.unit_price,
+            total_price = log.quantity * log.unit_price
+        )
+        db.add(db_log)
+        db.flush()
     db_table.purchase_summary = db_history.purchase_summary
     db_history.re_registered_at = datetime.now(UTC)
     db_history.re_registered_table_id = db_table.id
@@ -1352,3 +1385,28 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     
     db.commit()
     return db_to
+
+# ========================
+# LOGHISTORY
+# ========================
+def create_log_history(
+        db: Session,
+        log_history: LogHistoryCreate,
+): 
+    db_log_history = LogHistory (
+        id = log_history.id,
+        history_id = log_history.history_id,
+        item_id = log_history.item_id,
+        item_name = log_history.item_name,
+        quantity = log_history.quantity,
+        unit_price = log_history.unit_price,
+    )
+    db.add(db_log_history)
+    db.commit()
+    return db_log_history
+
+def get_log_histories(
+        db: Session,
+        history_id: int,       
+) : 
+    return db.query(LogHistory).filter(LogHistory.history_id == history_id).all()

@@ -328,6 +328,35 @@ class TablePurchaseLogResponse(BaseModel):
 
 
 # =========================
+# LOGHISTORY
+# =========================
+
+class LogHistoryCreate(BaseModel):
+    table_id: str
+    item_id: int
+    quantity: int = 1
+    user_id: str
+    batch_id: str
+    history_id: int
+
+class LogHistoryResponse(BaseModel):
+    id: int
+    table_id: str
+    item_id: int    
+    item_name: str
+    quantity: int
+    unit_price: int
+    total_price: int
+
+    user_id: str
+    batch_id: str
+
+    created_at: datetime
+
+    class Config:
+        from_attributes = True 
+
+# =========================
 # RESERVATION
 # =========================
 

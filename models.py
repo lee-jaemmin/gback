@@ -204,7 +204,24 @@ class TablePurchaseLog(Base):
       
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+class LogHistory(Base):
+    __tablename__ = "log_histories"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    history_id = Column(Integer, ForeignKey("table_histories.id"), nullable=False)
+    table_id = Column(String, nullable=False)
+    item_id = Column(Integer, nullable=False)
     
+    batch_id = Column(String, nullable=False)
+    item_name = Column(String, nullable=False, index=True)
+    quantity = Column(Integer, default=1, nullable=False)
+    user_id = Column(String, nullable=True)
+    user_name = Column(String, nullable=True)
+    unit_price = Column(Integer, default=0, nullable=False)
+    total_price = Column(Integer, default=0, nullable=False)
+
 
 
 class Reservation(Base):
