@@ -231,7 +231,7 @@ class Reservation(Base):
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
 
-    reservation_time = Column(DateTime(timezone=True), nullable=False)
+    reservation_time = Column(DateTime(timezone=True), nullable=True)
     bid_price = Column(Integer, default=0, nullable=True)
 
     customer_name = Column(String, default="", nullable=False)

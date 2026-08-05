@@ -361,7 +361,7 @@ class LogHistoryResponse(BaseModel):
 # =========================
 
 class ReservationBase(BaseModel):
-    reservation_time: datetime
+    reservation_time: Optional[datetime]
     customer_name: str
     customer_phone: str = ""
     bid_price: Optional[int] = 0
