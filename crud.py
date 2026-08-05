@@ -1207,7 +1207,7 @@ def reregister_table(
     total_price = sum(hp.unit_price * hp.quantity for hp in db_history_purchases)
     db_table.total_price = total_price
     db.flush()
-    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+    db_table.purchase_summary = db_history.purchase_summary
     db_history.re_registered_at = datetime.now(UTC)
     db_history.re_registered_table_id = db_table.id
     db.delete(db_history)
