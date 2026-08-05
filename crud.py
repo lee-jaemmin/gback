@@ -1293,6 +1293,12 @@ def reset_daily_state(db: Session):
             except Exception as e:
                 print(f"[Daily reset error]: table_id: {table.id}, e: {e}")
 
+        # 재등록용 로그 히스토리 초기화
+        db.query(LogHistory).delete(synchronize_session=False)
+
+        # 현재 주문 로그 초기화
+        db.query(TablePurchaseLog).delete(synchronize_session=False)
+
         # 예약 구매 내역 먼저 삭제
         db.query(ReservationPurchase).delete(synchronize_session=False)
 
