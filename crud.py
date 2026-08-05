@@ -468,50 +468,53 @@ def delete_item(
 # ========================
 # TablePurchase 여기서부터는 db: Session 맨 앞에.
 # ========================
-def create_purchase(
-    db: Session,
-    purchase: TablePurchaseCreate
-):
-    db_item = get_item(purchase.item_id, db) # 이번에 주문한 아이템.
-    db_table = get_table(db, purchase.table_id)
+# def create_purchase(
+#     db: Session,
+#     purchase: TablePurchaseCreate
+# ):
+#     db_item = get_item(purchase.item_id, db) # 이번에 주문한 아이템.
+#     db_table = get_table(db, purchase.table_id)
 
-    existing_purchase = (
-        db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인.
-            TablePurchase.table_id == purchase.table_id,
-            TablePurchase.item_id == purchase.item_id).first()
-        )
+#     existing_purchase = (
+#         db.query(TablePurchase).filter( # 주문한 거 또 주문하는지 확인.
+#             TablePurchase.table_id == purchase.table_id,
+#             TablePurchase.item_id == purchase.item_id).first()
+#         )
     
-    if existing_purchase is not None:
-        existing_purchase.quantity += purchase.quantity
-        # 바뀐 품목당 가격 재계산
-        existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
-        recalculate_table_total_price(db, existing_purchase.table_id)
-        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
-        db.commit()
-        db.refresh(existing_purchase)
-        return existing_purchase
+#     if existing_purchase is not None:
+#         existing_purchase.quantity += purchase.quantity
+#         # 바뀐 품목당 가격 재계산
+#         existing_purchase.total_price = existing_purchase.quantity * existing_purchase.unit_price
+#         recalculate_table_total_price(db, existing_purchase.table_id)
+#         db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+#         db.commit()
+#         db.refresh(existing_purchase)
+#         return existing_purchase
 
-    unit_price = db_item.item_price
-    total_price = unit_price * purchase.quantity
-    item_name = db_item.item_name
+#     unit_price = db_item.item_price
+#     total_price = unit_price * purchase.quantity
+#     item_name = db_item.item_name
 
-    db_purchase = TablePurchase(
-        table_id = purchase.table_id,
-        item_id = purchase.item_id,
-        quantity = purchase.quantity,
-        unit_price = unit_price,
-        total_price = total_price,
-        item_name = item_name
-    )
+#     db_purchase = TablePurchase(
+#         table_id = purchase.table_id,
+#         item_id = purchase.item_id,
+#         quantity = purchase.quantity,
+#         unit_price = unit_price,
+#         total_price = total_price,
+#         item_name = item_name
+#     )
 
-    db.add(db_purchase)
-    db.flush()
-    recalculate_table_total_price(db, purchase.table_id)
-    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
-    db.commit()
-    db.refresh(db_purchase)
-    db.refresh(db_table)
-    return db_purchase
+#     db.add(db_purchase)
+#     db.flush()
+#     recalculate_table_total_price(db, purchase.table_id)
+#     if db_table.purchase_summary is True:
+#         new_purchases = build_purchase_summary(db, db_table.id)
+#         db_table.purchase_summary.append(p for p in new_purchases)   
+#     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+#     db.commit()
+#     db.refresh(db_purchase)
+#     db.refresh(db_table)
+#     return db_purchase
 
 def get_purchase(
         db: Session,
