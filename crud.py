@@ -1243,6 +1243,9 @@ def reregister_table(
         )
         db.add(db_log)
         db.flush()
+    # 기존 로그 없애기
+    for log in db_log_histories:
+        db.delete(log)
     db_table.purchase_summary = db_history.purchase_summary
     db_history.re_registered_at = datetime.now(UTC)
     db_history.re_registered_table_id = db_table.id
