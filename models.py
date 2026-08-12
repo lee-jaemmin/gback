@@ -335,6 +335,7 @@ class SetMenu(Base):
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     set_name = Column(String, nullable=False)
     set_price = Column(Integer, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     set_menu_items = relationship("SetMenuItem", back_populates="set_menu")
 
 class SetMenuItem(Base):
