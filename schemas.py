@@ -544,3 +544,45 @@ class MenuCacheResponse(BaseModel):
     version: datetime
     categories: list[CategoryCache]
     items: list[ItemCache]
+
+# =========================
+# SETMENU
+# =========================
+class SetMenuBase(BaseModel):
+    company_id: str
+    set_name: str
+    set_price: int
+
+class SetMenuCreate(SetMenuBase):
+    pass
+
+class SetMenuUpdate(BaseModel):
+    set_name: Optional[str] = None
+    set_price: Optional[int] = None
+
+class SetMenuResponse(SetMenuBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+# =========================
+# SETMENUITEMS
+# =========================
+class SetMenuItemBase(BaseModel):
+    set_menu_id: int
+    item_id: int
+    quantity: int
+
+class SetMenuItemCreate(SetMenuItemBase):
+    pass
+
+class SetMenuItemUpdate(BaseModel):
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+
+class SetMenuItemResponse(SetMenuItemBase):
+    id: int
+
+    class Config:
+        from_attributes = True
