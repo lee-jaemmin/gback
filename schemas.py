@@ -555,6 +555,7 @@ class SetMenuBase(BaseModel):
     set_name: str
     set_price: int
     is_active: bool
+    category_id: int
 
 class SetMenuCreate(SetMenuBase):
     pass
@@ -563,6 +564,7 @@ class SetMenuUpdate(BaseModel):
     set_name: Optional[str] = None
     set_price: Optional[int] = None
     is_active: Optional[bool] = None
+    category_id: Optional[int] = None
 
 class SetMenuResponse(SetMenuBase):
     id: int
