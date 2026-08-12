@@ -1,13 +1,15 @@
 from sqlalchemy.orm import Session
 from models import ( 
             Company, User, TableMaster, ItemCategory, Item, TablePurchase, Reservation, ReservationPurchase, 
-            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification, BidList, LogHistory
+            TableHistory, TableHistoryPurchase, TablePurchaseLog, Notification, BidList, LogHistory, SetMenu,
+            SetMenuItem
         )
 from schemas import (
             CompanyCreate, CompanyUpdate, UserCreate, UserUpdate, TableCreate, TableUpdate, ItemCategoryCreate,
             ItemCategoryUpdate,ItemCreate, ItemUpdate, TablePurchaseCreate, TablePurchaseUpdate,ReservationCreate,
             ReservationUpdate, ReservationPurchaseCreate, ReservationPurchaseUpdate, TablePurchaseLogCreate, ReservationInputCreate,
-            BidListCreate, BidListUpdate, LogHistoryCreate, LogHistoryResponse
+            BidListCreate, BidListUpdate, LogHistoryCreate, LogHistoryRespons, SetMenuCreate, SetMenuUpdate, SetMenuResponse,
+            SetMenuItemCreate, SetMenuItemUpdate, SetMenuItemResponse
         )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -1430,3 +1432,27 @@ def get_log_histories(
         history_id: int,       
 ) : 
     return db.query(LogHistory).filter(LogHistory.history_id == history_id).all()
+
+# ========================
+# SET MENU
+# ========================
+def create_set_menu(
+        db: Session,
+        set_menu: SetMenuCreate
+):
+    db_set_menu = SetMenu(
+        company_id = set_menu.company_id,
+        set_name = set_menu.set_name,
+        set_price = set_menu.set_price
+    )
+    db.add(db_set_menu)
+    db.commit()
+    db.refresh(db_set_menu)
+    return db_set_menu
+
+def get_set_menu(
+        db: Session,
+        set_menu_id: int
+):
+    return db.query(SetMenu).filter(SetMenu.id == set_menu_id).first()
+
