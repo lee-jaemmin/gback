@@ -200,9 +200,6 @@ class TablePurchaseLog(Base):
     user_name = Column(String, nullable=True)
     unit_price = Column(Integer, default=0, nullable=False)
     total_price = Column(Integer, default=0, nullable=False)
-
-      
-
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 class LogHistory(Base):
@@ -331,3 +328,20 @@ class Notification(Base):
     type = Column(String, nullable=False) # 아웃, 만료 등
 
     created_at = Column(DateTime, nullable=False, default=utc_now)
+
+class SetMenu(Base):
+    __tablename__ = "set_menus"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    set_name = Column(String, nullable=False)
+    set_price = Column(Integer, nullable=False)
+    set_menu_items = relationship("SetMenuItem", back_populates="set_menu")
+
+class SetMenuItem(Base):
+    __tablename__ = "set_menu_items"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    set_menu_id = Column(Integer, ForeignKey("set_menus.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    quantity = Column(Integer, nullable=False)
+    set_menu = relationship("SetMenu", back_populates="set_menu_items")
+
