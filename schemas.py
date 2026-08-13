@@ -563,7 +563,7 @@ class SetMenuItemInput(BaseModel):
 
 class SetMenuCreate(SetMenuBase):
     items: list[SetMenuItemInput]
-    quantity: int
+    
     # model에는 없지만 구성품을 보내줘야 하므로 필요함
 
 
