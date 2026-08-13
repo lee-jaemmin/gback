@@ -1252,17 +1252,20 @@ def clear_invalid_fcm_tokens(user_ids: list[str]):
 # =====================
 @app.post('/set-menus', response_model=schemas.SetMenuResponse)
 def create_set_menu(
-    company_id: str,
     set_menu: schemas.SetMenuCreate,
     db: Session = Depends(get_db)
 ):
-    db_company = crud.get_company(db, company_id)
+    db_company = crud.get_company(db, set_menu.company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    db_set_menu = crud.create_set_menu(db, set_menu)
-    return db_set_menu
+    result = crud.create_set_menu(db, set_menu)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Set Menu Items not found")
+    if result == "ITEM NOT FOUND":
+        raise HTTPException(status_code=404, detail="Requested Items not found")
+    return result
 
-@app.get("/companies/{company_id}/set-menus", response_model=schemas.SetMenuResponse)
+@app.get("/companies/{company_id}/set-menus", response_model=list[schemas.SetMenuResponse])
 def read_set_menus_by_company(
     company_id: str,
     db: Session = Depends(get_db)
@@ -1276,13 +1279,21 @@ def read_set_menus_by_company(
 def update_set_menu(
     company_id: str,
     set_menu_id: int,
+    set_menu_update: schemas.SetMenuUpdate,
     db: Session = Depends(get_db)
 ):
     db_company = crud.get_company(db, company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    result = crud.get_set_menu(db, set_menu_id, company_id)
-    if result is None:
+    result = crud.update_set_menu(db, set_menu_id, company_id, set_menu_update)
+    if result == "SET MENU NOT FOUND":
         raise HTTPException(status_code=404, detail="Set Menu not found")
+    if result == "COMPANY NOT FOUND":
+            raise HTTPException(status_code=404, detail="Company not found")
+    if result == "EMPTY UPDATE ITEM":
+            raise HTTPException(status_code=400, detail="Update Item List is Empty")
+    if result == "ITEM NOT FOUND":
+      raise HTTPException(status_code=404, detail="Requested Items not found")
+
     return result
