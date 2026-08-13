@@ -1245,3 +1245,44 @@ def clear_invalid_fcm_tokens(user_ids: list[str]):
         db.commit()
     finally:
         db.close()
+
+
+# =====================
+# SET MENU API
+# =====================
+@app.post('/set-menus', response_model=schemas.SetMenuResponse)
+def create_set_menu(
+    company_id: str,
+    set_menu: schemas.SetMenuCreate,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    db_set_menu = crud.create_set_menu(db, set_menu)
+    return db_set_menu
+
+@app.get("/companies/{company_id}/set-menus", response_model=schemas.SetMenuResponse)
+def read_set_menus_by_company(
+    company_id: str,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return crud.get_set_menus_by_company(db, company_id)
+
+@app.patch("/companies/{company_id}/set-menus/{set_menu_id}", response_model=schemas.SetMenuResponse)
+def update_set_menu(
+    company_id: str,
+    set_menu_id: int,
+    db: Session = Depends(get_db)
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    result = crud.get_set_menu(db, set_menu_id, company_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Set Menu not found")
+    return result
