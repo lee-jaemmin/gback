@@ -269,8 +269,9 @@ class ItemResponse(ItemBase):
 
 class TablePurchaseCreate(BaseModel):
     table_id: str
-    item_id: int
+    item_id: Optional[int]
     quantity: int = 1
+    set_menu_id: Optional[int]
 
 
 class TablePurchaseUpdate(BaseModel):
@@ -284,8 +285,8 @@ class TablePurchaseUpdate(BaseModel):
 class TablePurchaseResponse(BaseModel):
     id: int
     table_id: str
-    item_id: int
-
+    item_id: Optional[int]
+    set_menu_id: Optional[int]
     item_name: str
     quantity: int
     unit_price: int
@@ -306,16 +307,19 @@ class TablePurchaseResponse(BaseModel):
 
 class TablePurchaseLogCreate(BaseModel):
     table_id: str
-    item_id: int
+    item_id: Optional[int]
+    set_menu_id: Optional[int]
     quantity: int = 1
     user_id: str
     batch_id: str
+    
 
 
 class TablePurchaseLogUpdate(BaseModel):
     table_id: Optional[str] = None
-    item_id: int
+    item_id: Optional[int] = None
     item_name: Optional[str] = None
+    set_menu_id: Optional[str] = None
     quantity: Optional[int] = None
     unit_price: Optional[int] = None
     total_price: Optional[int] = None
@@ -326,6 +330,7 @@ class TablePurchaseLogResponse(BaseModel):
     table_id: str
     item_id: int
     item_name: str
+    set_menu_id: int
     quantity: int
     unit_price: int
     total_price: int
