@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 from datetime import datetime, date
 
@@ -273,6 +273,14 @@ class TablePurchaseCreate(BaseModel):
     quantity: int = 1
     set_menu_id: Optional[int]
 
+    @model_validator(mode="after")
+    def validate_product_type(self):
+        if(self.item_id is None) == (self.set_menu_id == None):
+            raise ValueError (
+                "item_id와 set_menu_id 중 하나만 입력해야합니다."
+            )
+        return self
+
 
 class TablePurchaseUpdate(BaseModel):
     table_id: Optional[str] = None
@@ -312,7 +320,14 @@ class TablePurchaseLogCreate(BaseModel):
     quantity: int = 1
     user_id: str
     batch_id: str
-    
+
+    @model_validator(mode="after")
+    def validate_product_type(self):
+        if(self.item_id is None) == (self.set_menu_id == None):
+            raise ValueError (
+                "item_id와 set_menu_id 중 하나만 입력해야합니다."
+            )
+        return self         
 
 
 class TablePurchaseLogUpdate(BaseModel):
