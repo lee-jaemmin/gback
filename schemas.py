@@ -555,14 +555,15 @@ class SetMenuBase(BaseModel):
     is_active: bool
 
 
-class SetMenuCreate(SetMenuBase):
-    pass
-
-
 class SetMenuItemInput(BaseModel):
     # 세트 메뉴 아이템 수정 시 줄 스키마
     item_id: int
     quantity: int
+
+
+class SetMenuCreate(SetMenuBase):
+    items: list[SetMenuItemInput]
+    # model에는 없지만 구성품을 보내줘야 하므로 필요함
 
 
 class SetMenuUpdate(BaseModel):
@@ -600,8 +601,7 @@ class SetMenuItemBase(BaseModel):
 
 
 class SetMenuItemCreate(SetMenuItemBase):
-    items: list[SetMenuItemInput]
-    # model에는 없지만 구성품을 보내줘야 하므로 필요함.
+    pass
 
 
 class SetMenuItemUpdate(BaseModel):
