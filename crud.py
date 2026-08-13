@@ -1572,13 +1572,43 @@ def get_log_histories(
 # SET MENU
 # ========================
 def create_set_menu(db: Session, set_menu: SetMenuCreate):
+
+    if not set_menu.items:
+        return None
+
+    item_ids = [item.item_id for item in set_menu.items]
+
+    db_items = (
+        db.query(Item)
+        .filter(
+            Item.id.in_(item_ids), Item.company_id == set_menu.company_id
+        )  # db에서는 in_()
+        .all()
+    )
+    items_by_id = {item.id: item for item in db_items}
+
+    if len(items_by_id) != len(set(item_ids)):
+        return "ITEM_NOT_FOUND"
+
     db_set_menu = SetMenu(
         company_id=set_menu.company_id,
         set_name=set_menu.set_name,
         set_price=set_menu.set_price,
         is_active=set_menu.is_active,
     )
+
     db.add(db_set_menu)
+    db.flush()
+
+    for item in set_menu.items:
+        db.add(
+            SetMenuItem(
+                set_menu_id=db_set_menu.id,
+                item_id=item.item_id,
+                quantity=item.quantity,
+            )
+        )
+
     db.commit()
     db.refresh(db_set_menu)
     return db_set_menu
@@ -1639,3 +1669,18 @@ def get_set_menu_items_by_company(
         .filter(SetMenu.company_id == company_id)
         .all()
     )
+
+
+def create_set_menu_item(
+    db: Session,
+    set_menu_item: SetMenuItemCreate,
+):
+    db_set_menu_items = SetMenuItem(
+        item_id=set_menu_item.item_id,
+        set_menu_id=set_menu_item.set_menu_id,
+        quantity=set_menu_item.quantity,
+    )
+    db.add(db_set_menu_items)
+    db.commit()
+    db.refresh(db_set_menu_items)
+    return db_set_menu_items
