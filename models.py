@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     Integer,
     String,
@@ -173,6 +174,16 @@ class Item(Base):
 
 class TablePurchase(Base):
     __tablename__ = "table_purchases"
+    __table_args__ = (
+        CheckConstraint(
+            """
+            (item_id IS NOT NULL AND set_menu_id IS NULL)
+            OR
+            (item_id IS NULL AND set_menu_id IS NOT NULL)            
+            """,
+            name="check_table_purchases_single_product_type"
+        )
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
@@ -196,6 +207,17 @@ class TablePurchase(Base):
 
 class TablePurchaseLog(Base):
     __tablename__ = "table_purchases_log"
+
+    __table_args__ = (
+            CheckConstraint(
+                """
+                (item_id IS NOT NULL AND set_menu_id IS NULL)
+                OR
+                (item_id IS NULL AND set_menu_id IS NOT NULL)            
+                """,
+                name="check_table_purchase_log_single_product_type"
+            )
+        )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
