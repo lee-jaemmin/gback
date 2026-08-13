@@ -343,9 +343,9 @@ class TablePurchaseLogUpdate(BaseModel):
 class TablePurchaseLogResponse(BaseModel):
     id: int
     table_id: str
-    item_id: int
+    item_id: Optional[int]
     item_name: str
-    set_menu_id: int
+    set_menu_id: Optional[int]
     quantity: int
     unit_price: int
     total_price: int
