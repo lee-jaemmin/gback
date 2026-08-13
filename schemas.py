@@ -600,7 +600,8 @@ class SetMenuItemBase(BaseModel):
 
 
 class SetMenuItemCreate(SetMenuItemBase):
-    pass
+    items: list[SetMenuItemInput]
+    # model에는 없지만 구성품을 보내줘야 하므로 필요함.
 
 
 class SetMenuItemUpdate(BaseModel):
