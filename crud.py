@@ -1623,3 +1623,18 @@ def update_set_menu(
     db.commit()
     db.refresh(db_set_menu)
     return db_set_menu
+
+
+# ========================
+# SET MENU ITEMS
+# ========================
+def get_set_menu_items_by_company(
+    db: Session,
+    company_id: str,
+):
+    return (
+        db.query(SetMenuItem)
+        .join(SetMenu, SetMenuItem.set_menu_id == SetMenu.id)
+        .filter(SetMenu.company_id == company_id)
+        .all()
+    )
