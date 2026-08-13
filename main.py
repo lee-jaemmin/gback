@@ -1207,12 +1207,17 @@ def cache_menus(
 ):
     db_categories = crud.get_item_categories(db) # 객체 리스트 반환: itemCategory(id=1, category_name="주류", sort_order=1),
     db_items = crud.get_items_by_company(company_id, db)
+    db_set_menus = crud.get_set_menus_by_company(db, company_id)
+    db_set_menu_items = crud.get_set_menu_items_by_company(db, company_id)
+    
 
     return {
         "company_id": company_id,
         "categories": db_categories,
         "items": db_items,
-        "version": datetime.now(UTC)
+        "version": datetime.now(UTC),
+        "set_menus": db_set_menus,
+        "set_menu_items": db_set_menu_items
     }
 # ========================
 # TOKEN
