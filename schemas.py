@@ -10,10 +10,12 @@ from datetime import datetime, date
 # COMPANY
 # =========================
 
+
 class CompanyBase(BaseModel):
     name: str
     address: str
     region: str = ""
+
 
 class CompanyCreate(CompanyBase):
     pass
@@ -24,6 +26,7 @@ class CompanyUpdate(BaseModel):
     region: Optional[str] = None
     address: Optional[str] = None
     sections: Optional[list[str]] = None
+
 
 class CompanyResponse(CompanyBase):
     id: str
@@ -39,6 +42,7 @@ class CompanyResponse(CompanyBase):
 # =========================
 # USER
 # =========================
+
 
 class UserBase(BaseModel):
     username: str
@@ -60,7 +64,7 @@ class UserUpdate(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     fcmtoken: Optional[str] = None
-    tablecardfields: Optional[List[str]] = None 
+    tablecardfields: Optional[List[str]] = None
     company_id: Optional[str] = None
     is_push_on: Optional[bool] = None
 
@@ -77,6 +81,7 @@ class UserResponse(UserBase):
 # =========================
 # TABLEMASTER
 # =========================
+
 
 class TableBase(BaseModel):
     tablename: str
@@ -161,6 +166,7 @@ class TableResponse(TableBase):
 # BIDLIST
 # =========================
 
+
 class BidListBase(BaseModel):
     company_name: str
     user_name: str
@@ -198,6 +204,7 @@ class BidListResponse(BidListBase):
 # ITEMCATEGORY
 # =========================
 
+
 class ItemCategoryCreate(BaseModel):
     category_name: str
     sort_order: int = 0
@@ -223,6 +230,7 @@ class ItemCategoryResponse(BaseModel):
 # =========================
 # ITEM
 # =========================
+
 
 class ItemBase(BaseModel):
     item_name: str
@@ -258,6 +266,7 @@ class ItemResponse(ItemBase):
 # 현재 테이블에서 실제 주문한 상품
 # =========================
 
+
 class TablePurchaseCreate(BaseModel):
     table_id: str
     item_id: int
@@ -288,10 +297,12 @@ class TablePurchaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 # =========================
 # TABLEPURCHASELOG
 # 현재 테이블에서 실제 주문한 상품
 # =========================
+
 
 class TablePurchaseLogCreate(BaseModel):
     table_id: str
@@ -299,6 +310,7 @@ class TablePurchaseLogCreate(BaseModel):
     quantity: int = 1
     user_id: str
     batch_id: str
+
 
 class TablePurchaseLogUpdate(BaseModel):
     table_id: Optional[str] = None
@@ -312,7 +324,7 @@ class TablePurchaseLogUpdate(BaseModel):
 class TablePurchaseLogResponse(BaseModel):
     id: int
     table_id: str
-    item_id: int    
+    item_id: int
     item_name: str
     quantity: int
     unit_price: int
@@ -324,12 +336,13 @@ class TablePurchaseLogResponse(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True        
+        from_attributes = True
 
 
 # =========================
 # LOGHISTORY
 # =========================
+
 
 class LogHistoryCreate(BaseModel):
     table_id: str
@@ -339,10 +352,11 @@ class LogHistoryCreate(BaseModel):
     batch_id: str
     history_id: int
 
+
 class LogHistoryResponse(BaseModel):
     id: int
     table_id: str
-    item_id: int    
+    item_id: int
     item_name: str
     quantity: int
     unit_price: int
@@ -354,11 +368,13 @@ class LogHistoryResponse(BaseModel):
     created_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
 
 # =========================
 # RESERVATION
 # =========================
+
 
 class ReservationBase(BaseModel):
     reservation_time: Optional[datetime]
@@ -377,6 +393,7 @@ class ReservationUpdate(BaseModel):
     customer_phone: Optional[str] = None
     bid_price: Optional[int] = None
 
+
 class ReservationResponse(ReservationBase):
     id: int
     table_id: str
@@ -391,6 +408,7 @@ class ReservationResponse(ReservationBase):
 # =========================
 # RESERVATIONPURCHASE
 # =========================
+
 
 class ReservationPurchaseCreate(BaseModel):
     reservation_id: int
@@ -422,13 +440,16 @@ class ReservationPurchaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 # =========================
 # RESERVATIONINPUT
 # =========================
 
+
 class ReservationInputBase(BaseModel):
     item_id: int = 0
     quantity: int = 0
+
 
 class ReservationInputCreate(ReservationInputBase):
     reservation_time: datetime
@@ -442,6 +463,7 @@ class ReservationInputCreate(ReservationInputBase):
 # TABLEHISTORY
 # 테이블 아웃 당시 스냅샷
 # =========================
+
 
 class TableHistoryBase(BaseModel):
     table_id: str
@@ -476,6 +498,7 @@ class TableHistoryResponse(TableHistoryBase):
     class Config:
         from_attributes = True
 
+
 # =========================
 # TABLEHISTORYPURCHASE
 # =========================
@@ -486,11 +509,16 @@ class TableHistoryPurchaseBase(BaseModel):
     quantity: int = 1
     unit_price: int = 0
     total_price: int = 0
+
+
 class TableHistoryPurchaseCreate(TableHistoryPurchaseBase):
     pass
+
+
 class TableHistoryPurchaseResponse(TableHistoryPurchaseBase):
     id: int
     created_at: datetime
+
     class Config:
         from_attributes = True
 
@@ -503,6 +531,8 @@ class NotificationCreate(BaseModel):
     title: str
     body: str
     type: str
+
+
 class NotificationResponse(BaseModel):
     id: int
     company_id: str
@@ -510,8 +540,93 @@ class NotificationResponse(BaseModel):
     body: str
     type: str
     created_at: datetime
+
     class Config:
         from_attributes = True
+
+
+# =========================
+# SETMENU
+# =========================
+class SetMenuBase(BaseModel):
+    company_id: str
+    set_name: str
+    set_price: int
+    is_active: bool
+    category_id: int
+
+
+class SetMenuCreate(SetMenuBase):
+    pass
+
+
+class SetMenuItemInput(BaseModel):
+    # 세트 메뉴 아이템 수정 시 줄 스키마
+    item_id: int
+    quantity: int
+
+
+class SetMenuUpdate(BaseModel):
+    set_name: Optional[str] = None
+    set_price: Optional[int] = None
+    is_active: Optional[bool] = None
+    category_id: Optional[int] = None
+    items: Optional[list[SetMenuItemInput]] = None
+
+
+class SetMenuResponse(SetMenuBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class SetMenuCache(BaseModel):
+    id: int
+    company_id: str
+    category_id: int
+    set_name: str
+    set_price: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# =========================
+# SETMENUITEMS
+# =========================
+class SetMenuItemBase(BaseModel):
+    set_menu_id: int
+    item_id: int
+    quantity: int
+
+
+class SetMenuItemCreate(SetMenuItemBase):
+    pass
+
+
+class SetMenuItemUpdate(BaseModel):
+    item_id: Optional[int] = None
+    quantity: Optional[int] = None
+
+
+class SetMenuItemResponse(SetMenuItemBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class SetMenuItemCache(BaseModel):
+    id: int
+    set_menu_id: int
+    item_id: int
+    quantity: int
+
+    class Config:
+        from_attributes = True
+
 
 # =========================
 # MENU CACHE
@@ -530,6 +645,7 @@ class ItemCache(BaseModel):
     class Config:
         from_attributes = True
 
+
 class CategoryCache(BaseModel):
     id: int
     category_name: str
@@ -539,77 +655,11 @@ class CategoryCache(BaseModel):
     class Config:
         from_attributes = True
 
+
 class MenuCacheResponse(BaseModel):
     company_id: str
     version: datetime
     categories: list[CategoryCache]
     items: list[ItemCache]
     set_menus: list[SetMenuCache]
-    set_menu_items: list[Setmu]
-
-# =========================
-# SETMENU
-# =========================
-class SetMenuBase(BaseModel):
-    company_id: str
-    set_name: str
-    set_price: int
-    is_active: bool
-    category_id: int
-
-class SetMenuCreate(SetMenuBase):
-    pass
-
-class SetMenuUpdate(BaseModel):
-    set_name: Optional[str] = None
-    set_price: Optional[int] = None
-    is_active: Optional[bool] = None
-    category_id: Optional[int] = None
-
-class SetMenuResponse(SetMenuBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
-class SetMenuCache(BaseModel):
-    id: int
-    company_id: str
-    category_id: int
-    set_name: str
-    set_price: int
-    is_active: bool
-
-    class Config: 
-        from_attributes = True
-
-
-# =========================
-# SETMENUITEMS
-# =========================
-class SetMenuItemBase(BaseModel):
-    set_menu_id: int
-    item_id: int
-    quantity: int
-
-class SetMenuItemCreate(SetMenuItemBase):
-    pass
-
-class SetMenuItemUpdate(BaseModel):
-    item_id: Optional[int] = None
-    quantity: Optional[int] = None
-
-class SetMenuItemResponse(SetMenuItemBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
-class SetMenuItemCache(BaseModel):
-    id: int
-    set_menu_id: int
-    item_id: int
-    quantity: int
-
-    class Config:
-        from_attributes = True
+    set_menu_items: list[SetMenuItemCache]
