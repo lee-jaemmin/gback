@@ -346,7 +346,6 @@ class SetMenu(Base):
     __tablename__ = "set_menus"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=False)
     set_name = Column(String, nullable=False)
     set_price = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)

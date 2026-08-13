@@ -1577,7 +1577,6 @@ def create_set_menu(db: Session, set_menu: SetMenuCreate):
         set_name=set_menu.set_name,
         set_price=set_menu.set_price,
         is_active=set_menu.is_active,
-        category_id=set_menu.category_id,
     )
     db.add(db_set_menu)
     db.commit()
