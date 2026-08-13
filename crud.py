@@ -75,9 +75,9 @@ def recalculate_table_total_price(db: Session, table_id: str):
     if db_table is None:
         return None
 
-    purchases = get_purchases_by_table(db, table_id)
+    logs = get_purchase_logs(db, table_id)
 
-    db_table.total_price = sum(purchase.total_price for purchase in purchases)
+    db_table.total_price = sum(log.total_price for log in logs)
 
     return db_table
 
@@ -775,9 +775,6 @@ def delete_logs_and_purchases(
 
 
 def register_purchase(db: Session, log: TablePurchaseLogCreate):
-    db_item = get_item(log.item_id, db)
-    if db_item is None:
-        return "ITEM NOT FOUND"
     db_user = get_user(db, log.user_id)
     if db_user is None:
         return "USER NOT FOUND"
@@ -789,60 +786,99 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
         db_table.status = "inuse"
         db_table.registered_at = datetime.now(UTC)
 
-    db_log = TablePurchaseLog(
-        table_id=log.table_id,
-        item_id=db_item.id,
-        item_name=db_item.item_name,
-        quantity=log.quantity,
-        unit_price=db_item.item_price,
-        total_price=db_item.item_price * log.quantity,
-        user_id=log.user_id,
-        user_name=db_user.username,
-        batch_id=log.batch_id,
-    )
-
+    # 단품
+    if log.set_menu_id is None: 
+        item = get_item(log.item_id, db)
+        if item is None:
+            return "ITEM NOT FOUND"
+        db_log = TablePurchaseLog(
+            table_id=log.table_id,
+            item_id=item.id,
+            item_name=item.item_name,
+            set_menu_id=None,
+            quantity=log.quantity,
+            unit_price=item.item_price,
+            total_price=item.item_price * log.quantity,
+            user_id=log.user_id,
+            user_name=db_user.username,
+            batch_id=log.batch_id,
+            created_at=datetime.now(UTC),
+        )
+        existing_purchase = (
+            db.query(TablePurchase)
+            .filter(
+                TablePurchase.item_id == item.id, TablePurchase.table_id == db_table.id
+            )
+            .first()
+        )
+        if existing_purchase is not None:
+            existing_purchase.quantity += log.quantity
+            existing_purchase.total_price = existing_purchase.quantity * item.item_price
+        else:
+            db_purchase = TablePurchase(
+                table_id=log.table_id,
+                item_id=item.id,
+                item_name=item.item_name,
+                quantity=log.quantity,
+                unit_price=item.item_price,
+                total_price=item.item_price * log.quantity,
+                created_at=datetime.now(UTC),
+            )
+            db.add(db_purchase)
+    else:  # 세트
+        set_menu = get_set_menu(db, log.set_menu_id, db_table.company_id)
+        if set_menu is None:
+            return "SET MENU NOT FOUND"
+        db_log = TablePurchaseLog(
+            table_id=log.table_id,
+            item_id=None,
+            item_name=set_menu.set_name,
+            set_menu_id=log.set_menu_id,
+            quantity=log.quantity,
+            unit_price=set_menu.set_price,
+            total_price=set_menu.set_price * log.quantity,
+            user_id=log.user_id,
+            user_name=db_user.username,
+            batch_id=log.batch_id,
+            created_at=datetime.now(UTC),
+        )
+        for component in set_menu.set_menu_items:
+            db_item = get_item(component.item_id, db)
+            if db_item is None:
+                db.rollback()
+                return "ITEM NOT FOUND"
+            existing_purchase = (
+                db.query(TablePurchase)
+                .filter(
+                    TablePurchase.item_id == db_item.id,
+                    TablePurchase.table_id == db_table.id,
+                )
+                .first()
+            )
+            if existing_purchase is not None:
+                added_quantity = log.quantity * component.quantity
+                existing_purchase.quantity += added_quantity
+                existing_purchase.total_price = (
+                    existing_purchase.quantity * db_item.item_price
+                )
+            else:
+                db_purchase = TablePurchase(
+                    table_id=log.table_id,
+                    item_id=db_item.id,
+                    item_name=db_item.item_name,
+                    quantity=component.quantity * log.quantity,
+                    unit_price=db_item.item_price,
+                    total_price=db_item.item_price * component.quantity * log.quantity,
+                    created_at=datetime.now(UTC),
+                )
+                db.add(db_purchase)
     db.add(db_log)
     db.flush()
 
-    existing_purchase = (
-        db.query(TablePurchase)
-        .filter(  # 주문한 거 또 주문하는지 확인
-            TablePurchase.table_id == log.table_id, TablePurchase.item_id == log.item_id
-        )
-        .first()
-    )
-
-    if existing_purchase is not None:
-        existing_purchase.quantity += log.quantity
-        # 바뀐 품목당 가격 재계산
-        existing_purchase.total_price = (
-            existing_purchase.quantity * existing_purchase.unit_price
-        )
-        recalculate_table_total_price(db, existing_purchase.table_id)
-        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
-        db.add(existing_purchase)
-    else:
-        # 새로운 품목이면
-        unit_price = db_item.item_price
-        total_price = unit_price * log.quantity
-        item_name = db_item.item_name
-
-        db_purchase = TablePurchase(
-            table_id=log.table_id,
-            item_id=log.item_id,
-            quantity=log.quantity,
-            unit_price=unit_price,
-            total_price=total_price,
-            item_name=item_name,
-        )
-
-        db.add(db_purchase)
-        db.flush()
-        recalculate_table_total_price(db, db_table.id)
-        db_table.purchase_summary = build_purchase_summary(db, db_table.id)
+    recalculate_table_total_price(db, db_table.id)
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
-    return {"message": "register purchase successfully"}
-
+    return {"message": "registerd purchase successfully"}
 
 # ========================
 # RESERVATION
@@ -1629,27 +1665,30 @@ def get_set_menus_by_company(db: Session, company_id: str):
 def update_set_menu(
     db: Session, set_menu_id: int, company_id: str, set_menu_update: SetMenuUpdate
 ):
-    
+
     db_set_menu = get_set_menu(db, set_menu_id, company_id)
     if db_set_menu is None:
         return "SET MENU NOT FOUND"
-    
+
     # 구성품 비었나 검사
     if set_menu_update.items is not None:
-        if not set_menu_update.items: #[]가 오면 오류.
+        if not set_menu_update.items:  # []가 오면 오류.
             return "EMPTY UPDATE ITEM"
-        
+
         item_ids = [item.item_id for item in set_menu_update.items]
 
-
-        db_items = db.query(Item).filter(
-        Item.id.in_(item_ids),
-        Item.company_id == company_id,
-        ).all()
+        db_items = (
+            db.query(Item)
+            .filter(
+                Item.id.in_(item_ids),
+                Item.company_id == company_id,
+            )
+            .all()
+        )
 
         if len(db_items) != len(set(item_ids)):
             return "ITEM NOT FOUND"
-        
+
         db_set_menu.set_menu_items.clear()  # 연결된 아이템 다 지우고 (delete-orphan이라서 가능)
         db_set_menu.set_menu_items.extend(
             SetMenuItem(
@@ -1658,7 +1697,7 @@ def update_set_menu(
             )
             for item in set_menu_update.items
         )
-        
+
     update_data = set_menu_update.model_dump(
         exclude_unset=True, exclude={"items"}
     )  # items라는 거는 models.py에 없으니까.
