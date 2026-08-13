@@ -13,7 +13,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, UTC
 
-
 Base = declarative_base()
 
 
@@ -29,10 +28,12 @@ class Company(Base):
     invite_code = Column(String, unique=True, nullable=True, index=True)
     region = Column(String, nullable=True)
     address = Column(String, nullable=False)
-    sections = Column(JSON, nullable=False, default=lambda: ['A', 'B', 'C', 'D', 'E'])
+    sections = Column(JSON, nullable=False, default=lambda: ["A", "B", "C", "D", "E"])
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     users = relationship("User", back_populates="company")
     tables = relationship("TableMaster", back_populates="company")
@@ -91,7 +92,9 @@ class TableMaster(Base):
     timer_alert_sent_at = Column(DateTime(timezone=True), nullable=True)
     reserved_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     bid_end_at = Column(DateTime(timezone=True), nullable=True)
     bid_available = Column(Boolean, default=False)
@@ -117,6 +120,7 @@ class TableMaster(Base):
         cascade="all, delete-orphan",
     )
 
+
 class BidList(Base):
     __tablename__ = "bid_list"
 
@@ -126,8 +130,7 @@ class BidList(Base):
     user_phonenumber = Column(String, nullable=False)
     bid_price = Column(Integer, nullable=False)
 
-
-    #FK
+    # FK
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
@@ -157,7 +160,9 @@ class Item(Base):
     category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     company = relationship("Company", back_populates="items")
     category = relationship("ItemCategory", back_populates="items")
@@ -180,11 +185,14 @@ class TablePurchase(Base):
     total_price = Column(Integer, default=0, nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     table = relationship("TableMaster", back_populates="purchases")
     item = relationship("Item", back_populates="table_purchases")
-    
+
+
 class TablePurchaseLog(Base):
     __tablename__ = "table_purchases_log"
 
@@ -192,7 +200,7 @@ class TablePurchaseLog(Base):
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
-    
+
     batch_id = Column(String, nullable=False)
     item_name = Column(String, nullable=False, index=True)
     quantity = Column(Integer, default=1, nullable=False)
@@ -202,6 +210,7 @@ class TablePurchaseLog(Base):
     total_price = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
+
 class LogHistory(Base):
     __tablename__ = "log_histories"
 
@@ -210,7 +219,7 @@ class LogHistory(Base):
     history_id = Column(Integer, ForeignKey("table_histories.id"), nullable=False)
     table_id = Column(String, nullable=False)
     item_id = Column(Integer, nullable=False)
-    
+
     batch_id = Column(String, nullable=False)
     item_name = Column(String, nullable=False, index=True)
     quantity = Column(Integer, default=1, nullable=False)
@@ -218,7 +227,6 @@ class LogHistory(Base):
     user_name = Column(String, nullable=True)
     unit_price = Column(Integer, default=0, nullable=False)
     total_price = Column(Integer, default=0, nullable=False)
-
 
 
 class Reservation(Base):
@@ -235,7 +243,9 @@ class Reservation(Base):
     customer_phone = Column(String, default="", nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     table = relationship("TableMaster", back_populates="reservations")
 
@@ -260,7 +270,9 @@ class ReservationPurchase(Base):
     total_price = Column(Integer, default=0, nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     reservation = relationship("Reservation", back_populates="reservation_purchases")
     item = relationship("Item", back_populates="reservation_purchases")
@@ -283,7 +295,6 @@ class TableHistory(Base):
     user_id = Column(String, default="", nullable=False)
     user_name = Column(String, default="", nullable=False)
     company_id = Column(String, nullable=False)
-    
 
     registered_at = Column(DateTime(timezone=True), nullable=True)
     out_at = Column(DateTime(timezone=True), nullable=False)
@@ -318,6 +329,7 @@ class TableHistoryPurchase(Base):
 
     history = relationship("TableHistory", back_populates="table_history_purchases")
 
+
 class Notification(Base):
     __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -325,9 +337,10 @@ class Notification(Base):
 
     title = Column(String, nullable=False)
     body = Column(String, nullable=False)
-    type = Column(String, nullable=False) # 아웃, 만료 등
+    type = Column(String, nullable=False)  # 아웃, 만료 등
 
     created_at = Column(DateTime, nullable=False, default=utc_now)
+
 
 class SetMenu(Base):
     __tablename__ = "set_menus"
@@ -337,7 +350,10 @@ class SetMenu(Base):
     set_name = Column(String, nullable=False)
     set_price = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    set_menu_items = relationship("SetMenuItem", back_populates="set_menu")
+    set_menu_items = relationship(
+        "SetMenuItem", back_populates="set_menu", cascade="all, delete-orphan"
+    )
+
 
 class SetMenuItem(Base):
     __tablename__ = "set_menu_items"
@@ -346,4 +362,3 @@ class SetMenuItem(Base):
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     set_menu = relationship("SetMenu", back_populates="set_menu_items")
-
