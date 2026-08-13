@@ -1456,3 +1456,8 @@ def get_set_menu(
 ):
     return db.query(SetMenu).filter(SetMenu.id == set_menu_id).first()
 
+def get_set_menus_by_company(
+        db: Session,
+        company_id: str
+):
+    return db.query(SetMenu).filter(SetMenu.company_id == company_id).all()
