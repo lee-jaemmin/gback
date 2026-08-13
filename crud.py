@@ -39,7 +39,7 @@ from schemas import (
     BidListCreate,
     BidListUpdate,
     LogHistoryCreate,
-    LogHistoryRespons,
+    LogHistoryResponse,
     SetMenuCreate,
     SetMenuUpdate,
     SetMenuResponse,
