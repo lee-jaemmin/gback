@@ -174,22 +174,11 @@ class Item(Base):
 
 class TablePurchase(Base):
     __tablename__ = "table_purchases"
-    __table_args__ = (
-        CheckConstraint(
-            """
-            (item_id IS NOT NULL AND set_menu_id IS NULL)
-            OR
-            (item_id IS NULL AND set_menu_id IS NOT NULL)            
-            """,
-            name="check_table_purchases_single_product_type"
-        )
-    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
-    set_menu_id = Column(Integer, ForeignKey("set_menus.id"), nullable=True)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
 
     item_name = Column(String, nullable=False)
     quantity = Column(Integer, default=1, nullable=False)
