@@ -1452,12 +1452,33 @@ def create_set_menu(
 
 def get_set_menu(
         db: Session,
-        set_menu_id: int
+        set_menu_id: int,
+        company_id: str
 ):
-    return db.query(SetMenu).filter(SetMenu.id == set_menu_id).first()
+    return db.query(SetMenu).filter(SetMenu.id == set_menu_id, SetMenu.company_id == company_id).first()
 
 def get_set_menus_by_company(
         db: Session,
         company_id: str
 ):
     return db.query(SetMenu).filter(SetMenu.company_id == company_id).all()
+
+def update_set_menu(
+        db: Session,
+        set_menu_id: int,
+        company_id: str,
+        set_menu_update: SetMenuItemUpdate
+) : 
+    db_set_menu = get_set_menu(db, set_menu_id)
+    if db_set_menu is None:
+        return None
+
+    update_data = set_menu_update.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(db_set_menu, key, value)
+
+    db.commit()
+    db.refresh(db_set_menu)
+    return db_set_menu
+    
