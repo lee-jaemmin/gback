@@ -1588,7 +1588,7 @@ def create_set_menu(db: Session, set_menu: SetMenuCreate):
     items_by_id = {item.id: item for item in db_items}
 
     if len(items_by_id) != len(set(item_ids)):
-        return "ITEM_NOT_FOUND"
+        return "ITEM NOT FOUND"
 
     db_set_menu = SetMenu(
         company_id=set_menu.company_id,
@@ -1629,19 +1629,27 @@ def get_set_menus_by_company(db: Session, company_id: str):
 def update_set_menu(
     db: Session, set_menu_id: int, company_id: str, set_menu_update: SetMenuUpdate
 ):
+    
     db_set_menu = get_set_menu(db, set_menu_id, company_id)
     if db_set_menu is None:
-        return None
-
-    update_data = set_menu_update.model_dump(
-        exclude_unset=True, exclude={"items"}
-    )  # items라는 거는 models.py에 없으니까.
-
-    for key, value in update_data.items():
-        setattr(db_set_menu, key, value)
-
+        return "SET MENU NOT FOUND"
+    
+    # 구성품 비었나 검사
     if set_menu_update.items is not None:
-        # items: pydantic (schemas.py)의 SetMenuUpdate에 선언한 items 필드, itmes()와 관계 x
+        if not set_menu_update.items: #[]가 오면 오류.
+            return "EMPTY UPDATE ITEM"
+        
+        item_ids = [item.item_id for item in set_menu_update.items]
+
+
+        db_items = db.query(Item).filter(
+        Item.id.in_(item_ids),
+        Item.company_id == company_id,
+        ).all()
+
+        if len(db_items) != len(set(item_ids)):
+            return "ITEM NOT FOUND"
+        
         db_set_menu.set_menu_items.clear()  # 연결된 아이템 다 지우고 (delete-orphan이라서 가능)
         db_set_menu.set_menu_items.extend(
             SetMenuItem(
@@ -1650,6 +1658,13 @@ def update_set_menu(
             )
             for item in set_menu_update.items
         )
+        
+    update_data = set_menu_update.model_dump(
+        exclude_unset=True, exclude={"items"}
+    )  # items라는 거는 models.py에 없으니까.
+
+    for key, value in update_data.items():
+        setattr(db_set_menu, key, value)
 
     db.commit()
     db.refresh(db_set_menu)
