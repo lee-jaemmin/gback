@@ -177,7 +177,8 @@ class TablePurchase(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
+    set_menu_id = Column(Integer, ForeignKey("set_menus.id"), nullable=True)
 
     item_name = Column(String, nullable=False)
     quantity = Column(Integer, default=1, nullable=False)
@@ -199,7 +200,8 @@ class TablePurchaseLog(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("items.id"), nullable=True)
+    set_menu_id = Column(Integer, ForeignKey("set_menus.id"), nullable=True)
 
     batch_id = Column(String, nullable=False)
     item_name = Column(String, nullable=False, index=True)
