@@ -58,8 +58,9 @@ If commands cannot run, explain why and provide the exact command the user shoul
 ## Response style
 
 - Always respond in Korean unless the user explicitly asks for another language.
-- Be concise.
-- Start with what changed.
-- Mention files changed.
-- Mention verification result.
-- Mention any risk or follow-up.
+- Be concise and answer only what the user asked for.
+- For simple questions, give the direct answer and stop when the question has been answered.
+- Do not explain several steps ahead, optional background, future steps, or general best practices unless explicitly requested.
+- Let the user ask the next question instead of anticipating every possible next step.
+- Mention additional information only when it reveals an important error, risk, incompatibility, or decision the user needs to know now.
+- For code changes, start with what changed and mention changed files, verification results, and meaningful risks or follow-up.
