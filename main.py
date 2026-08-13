@@ -1289,8 +1289,6 @@ def update_set_menu(
     result = crud.update_set_menu(db, set_menu_id, company_id, set_menu_update)
     if result == "SET MENU NOT FOUND":
         raise HTTPException(status_code=404, detail="Set Menu not found")
-    if result == "COMPANY NOT FOUND":
-            raise HTTPException(status_code=404, detail="Company not found")
     if result == "EMPTY UPDATE ITEM":
             raise HTTPException(status_code=400, detail="Update Item List is Empty")
     if result == "ITEM NOT FOUND":
