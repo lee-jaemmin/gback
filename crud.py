@@ -792,7 +792,7 @@ def delete_logs_and_purchases(
     recalculate_table_total_price(db, db_table.id)
     db_table.purchase_summary=build_purchase_summary(db, db_table.id)
     db.commit()
-    return True
+    return db_table
 
 
 def register_purchase(db: Session, log: TablePurchaseLogCreate):
