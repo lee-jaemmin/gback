@@ -205,7 +205,7 @@ class TablePurchaseLog(Base):
                 (item_id IS NULL AND set_menu_id IS NOT NULL)            
                 """,
                 name="check_table_purchase_log_single_product_type"
-            )
+            ),
         )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -227,12 +227,23 @@ class TablePurchaseLog(Base):
 class LogHistory(Base):
     __tablename__ = "log_histories"
 
+    __table_args__ = (
+                CheckConstraint(
+                    """
+                    (item_id IS NOT NULL AND set_menu_id IS NULL)
+                    OR
+                    (item_id IS NULL AND set_menu_id IS NOT NULL)            
+                    """,
+                    name="check_log_history_single_product_type"
+                ),
+            )
+
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     history_id = Column(Integer, ForeignKey("table_histories.id"), nullable=False)
     table_id = Column(String, nullable=False)
-    item_id = Column(Integer, nullable=False)
-
+    item_id = Column(Integer, nullable=True)
+    set_menu_id = Column(Integer, nullable=True)
     batch_id = Column(String, nullable=False)
     item_name = Column(String, nullable=False, index=True)
     quantity = Column(Integer, default=1, nullable=False)
