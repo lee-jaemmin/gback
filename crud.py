@@ -742,34 +742,55 @@ def delete_logs_and_purchases(
     db_log = get_purchase_log(db, log_id)
     if db_log is None:
         return "Log not found"
-    db_item = get_item(db_log.item_id, db)
-    if db_item is None:
-        return "Item not found"
-    db_purchases = get_purchases_by_table(db, db_log.table_id)
     db_table = get_table(db, db_log.table_id)
     if db_table is None:
         return "Table not found"
+    db_purchases = get_purchases_by_table(db, db_log.table_id)
 
-    flag = False
-
-    for purchase in db_purchases:
-        if purchase.item_id == db_log.item_id:
-            flag = True
-            purchase.quantity = purchase.quantity - db_log.quantity
-            if purchase.quantity <= 0:
-                db.delete(purchase)
-            else:
-                purchase.total_price = purchase.unit_price * purchase.quantity
-    if flag is False:
-        return "Purchase not found"
-
+    if db_log.set_menu_id is not None:
+        # 세트 메뉴면
+        db_set_menu = get_set_menu(db, db_log.set_menu_id, db_table.company_id)
+        if db_set_menu is None:
+            return "Set Menu not found"
+        for item in db_set_menu.set_menu_items:
+            db_item = get_item(item.item_id, db)
+            if db_item is None:
+                # 하나라도 못 찾으면 return
+                db.rollback()
+                return "Set Menu Item not found"
+            flag = False
+            for purchase in db_purchases:
+                if purchase.item_id == db_item.id:
+                    flag=True
+                    purchase.quantity -= db_log.quantity * item.quantity
+                    if purchase.quantity <= 0:
+                        db.delete(purchase)
+                    else:
+                        purchase.total_price = purchase.unit_price * purchase.quantity
+                    break
+            if flag is False:
+                db.rollback()
+                return "Purchase not found"           
+                    
+    else: #단품
+        flag = False
+        db_item = get_item(db_log.item_id, db)
+        if db_item is None:
+            return "Item not found (single)"
+        for purchase in db_purchases:
+            if purchase.item_id == db_log.item_id:
+                flag = True
+                purchase.quantity = purchase.quantity - db_log.quantity
+                if purchase.quantity <= 0:
+                    db.delete(purchase)
+                else:
+                    purchase.total_price = purchase.unit_price * purchase.quantity
+        if flag is False:
+            return "Purchase not found"        
     db.flush()
-    remaining_purchases = get_purchases_by_table(db, db_table.id)
-
-    total_price = sum(purchase.total_price for purchase in remaining_purchases)
-    db_table.total_price = total_price
-
     db.delete(db_log)
+    recalculate_table_total_price(db, db_table.id)
+    db_table.purchase_summary=build_purchase_summary(db, db_table.id)
     db.commit()
     return True
 
@@ -787,7 +808,7 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
         db_table.registered_at = datetime.now(UTC)
 
     # 단품
-    if log.set_menu_id is None: 
+    if log.set_menu_id is None:
         item = get_item(log.item_id, db)
         if item is None:
             return "ITEM NOT FOUND"
@@ -827,6 +848,7 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
             db.add(db_purchase)
     else:  # 세트
         set_menu = get_set_menu(db, log.set_menu_id, db_table.company_id)
+
         if set_menu is None:
             return "SET MENU NOT FOUND"
         db_log = TablePurchaseLog(
@@ -846,7 +868,7 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
             db_item = get_item(component.item_id, db)
             if db_item is None:
                 db.rollback()
-                return "ITEM NOT FOUND"
+                return "SET MENU ITEM NOT FOUND"
             existing_purchase = (
                 db.query(TablePurchase)
                 .filter(
@@ -879,6 +901,7 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
     return {"message": "registerd purchase successfully"}
+
 
 # ========================
 # RESERVATION
@@ -1248,6 +1271,7 @@ def table_out(
             history_id=db_history.id,
             table_id=log.table_id,
             item_id=log.item_id,
+            set_menu_id=log.set_menu_id,
             item_name=log.item_name,
             batch_id=log.batch_id,
             user_id=log.user_id,
@@ -1256,6 +1280,7 @@ def table_out(
             unit_price=log.unit_price,
             total_price=log.quantity * log.unit_price,
         )
+        
         db.add(db_log_history)
         db.flush()
 
