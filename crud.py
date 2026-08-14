@@ -1280,7 +1280,7 @@ def table_out(
             unit_price=log.unit_price,
             total_price=log.quantity * log.unit_price,
         )
-        
+        db.delete(log)
         db.add(db_log_history)
         db.flush()
 
