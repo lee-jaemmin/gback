@@ -467,7 +467,7 @@ async def register_purchase(
     if result == "USER NOT FOUND":
         raise HTTPException(status_code=404, detail="User not found")
     if result == "SET MENU NOT FOUND":
-        raise HTTPException(status_code=404,detail="Set menu not found")
+        raise HTTPException(status_code=404, detail="Set menu not found")
 
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
 
@@ -569,23 +569,33 @@ def delete_logs(table_id: str, db: Session = Depends(get_db)):
 
 
 @app.delete("/purchase-logs/{log_id}")
-def delete_log_and_purchase(log_id: int, db: Session = Depends(get_db)):
+def delete_log_and_purchase(
+    log_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+):
     result = crud.delete_logs_and_purchases(db, log_id)
+    # result = db_table
     if result == "Log not found":
         raise HTTPException(status_code=404, detail="Log not found")
-    if result == "Item not found(single)":
+    if result == "Item not found (single)":
         raise HTTPException(status_code=404, detail="Item not found(single)")
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Purchase not found":
         raise HTTPException(status_code=404, detail="Purchase not found")
     if result == "Set Menu not found":
-            raise HTTPException(status_code=404, detail="Set Menu not found")
+        raise HTTPException(status_code=404, detail="Set Menu not found")
     if result == "Set Menu Item not found":
-                raise HTTPException(status_code=404, detail="Set Menu Item not found")
-    if result is True:
-        return {"message": "Deleted log and purchase successfully"}
-    raise HTTPException(status_code=500, detail="Failed to delete log and purchase")
+        raise HTTPException(status_code=404, detail="Set Menu Item not found")
+    payload = schemas.TableResponse.model_validate(result).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        result.company_id,
+        {
+            "type": "table_updated",
+            "payload": payload,
+        },
+    )
+    return result
 
 
 # =====================
