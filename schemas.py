@@ -269,9 +269,9 @@ class ItemResponse(ItemBase):
 
 class TablePurchaseCreate(BaseModel):
     table_id: str
-    item_id: Optional[int]
+    item_id: Optional[int] = None
     quantity: int = 1
-    set_menu_id: Optional[int]
+    set_menu_id: Optional[int] = None
 
     @model_validator(mode="after")
     def validate_product_type(self):
@@ -293,8 +293,8 @@ class TablePurchaseUpdate(BaseModel):
 class TablePurchaseResponse(BaseModel):
     id: int
     table_id: str
-    item_id: Optional[int]
-    set_menu_id: Optional[int]
+    item_id: Optional[int] = None
+    set_menu_id: Optional[int] = None
     item_name: str
     quantity: int
     unit_price: int
@@ -315,8 +315,8 @@ class TablePurchaseResponse(BaseModel):
 
 class TablePurchaseLogCreate(BaseModel):
     table_id: str
-    item_id: Optional[int]
-    set_menu_id: Optional[int]
+    item_id: Optional[int] = None
+    set_menu_id: Optional[int] = None
     quantity: int = 1
     user_id: str
     batch_id: str
@@ -343,9 +343,9 @@ class TablePurchaseLogUpdate(BaseModel):
 class TablePurchaseLogResponse(BaseModel):
     id: int
     table_id: str
-    item_id: Optional[int]
+    item_id: Optional[int] = None
     item_name: str
-    set_menu_id: Optional[int]
+    set_menu_id: Optional[int] = None
     quantity: int
     unit_price: int
     total_price: int
@@ -366,8 +366,8 @@ class TablePurchaseLogResponse(BaseModel):
 
 class LogHistoryCreate(BaseModel):
     table_id: str
-    item_id: Optional[int]
-    set_menu_id: Optional[int]
+    item_id: Optional[int] = None
+    set_menu_id: Optional[int] = None
     quantity: int = 1
     user_id: str
     batch_id: str
@@ -377,8 +377,8 @@ class LogHistoryCreate(BaseModel):
 class LogHistoryResponse(BaseModel):
     id: int
     table_id: str
-    item_id: Optional[int]
-    set_menu_id: Optional[int]
+    item_id: Optional[int] = None
+    set_menu_id: Optional[int] = None
     item_name: str
     quantity: int
     unit_price: int
@@ -477,7 +477,7 @@ class ReservationInputCreate(ReservationInputBase):
     reservation_time: datetime
     customer_name: str
     customer_phone: str
-    bid_price: Optional[int]
+    bid_price: Optional[int] = None
     purchases: list[ReservationInputBase] = []
 
 
