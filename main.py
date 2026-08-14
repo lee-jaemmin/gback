@@ -423,32 +423,32 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 # =====================
 # PURCHASE API
 # =====================
-@app.post("/purchases", response_model=schemas.TablePurchaseResponse)
-async def create_purchase(
-    purchase: schemas.TablePurchaseCreate,
-    backgroud_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-):
-    # FK check
-    db_table = crud.get_table(db, purchase.table_id)
-    db_item = crud.get_item(purchase.item_id, db)
+# @app.post("/purchases", response_model=schemas.TablePurchaseResponse)
+# async def create_purchase(
+#     purchase: schemas.TablePurchaseCreate,
+#     backgroud_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db),
+# ):
+#     # FK check
+#     db_table = crud.get_table(db, purchase.table_id)
+#     db_item = crud.get_item(purchase.item_id, db)
 
-    if db_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    if db_item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+#     if db_table is None:
+#         raise HTTPException(status_code=404, detail="Table not found")
+#     if db_item is None:
+#         raise HTTPException(status_code=404, detail="Item not found")
 
-    db_purchase = crud.create_purchase(db, purchase)
-    db.refresh(db_table)
+#     db_purchase = crud.create_purchase(db, purchase)
+#     db.refresh(db_table)
 
-    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    company_id = db_table.company_id
+#     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+#     company_id = db_table.company_id
 
-    backgroud_tasks.add_task(
-        manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
-    )
+#     backgroud_tasks.add_task(
+#         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
+#     )
 
-    return db_purchase
+#     return db_purchase
 
 
 @app.post("/register-purchase")
