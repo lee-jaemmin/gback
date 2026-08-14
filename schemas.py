@@ -366,7 +366,8 @@ class TablePurchaseLogResponse(BaseModel):
 
 class LogHistoryCreate(BaseModel):
     table_id: str
-    item_id: int
+    item_id: Optional[int]
+    set_menu_id: Optional[int]
     quantity: int = 1
     user_id: str
     batch_id: str
@@ -376,7 +377,8 @@ class LogHistoryCreate(BaseModel):
 class LogHistoryResponse(BaseModel):
     id: int
     table_id: str
-    item_id: int
+    item_id: Optional[int]
+    set_menu_id: Optional[int]
     item_name: str
     quantity: int
     unit_price: int
