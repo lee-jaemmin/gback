@@ -1423,6 +1423,7 @@ def reregister_table(
         db_log = TablePurchaseLog(
             table_id=db_table.id,
             item_id=log.item_id,
+            set_menu_id=log.set_menu_id,
             item_name=log.item_name,
             batch_id=log.batch_id,
             user_id=log.user_id,
