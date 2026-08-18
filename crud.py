@@ -959,6 +959,7 @@ def update_reservation(
         db_reservation.bid_price = reservation_update.bid_price
     if reservation_update.is_fixed is not None:
             db_reservation.is_fixed = reservation_update.is_fixed
+            db_table.is_reserved = reservation_update.is_fixed
             db_table.bid_available = not reservation_update.is_fixed
     db.commit()
     db.refresh(db_reservation)
@@ -1115,7 +1116,6 @@ def register_reservation(
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
-    db_table.is_reserved = True
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
         table_id=table_id,
