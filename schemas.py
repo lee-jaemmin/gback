@@ -108,6 +108,7 @@ class TableBase(BaseModel):
     bid_end_at: Optional[datetime] = None
     bid_available: Optional[bool] = True
     least_bid_price: int = 0
+    has_reservations: bool = False
 
     is_reserved: bool = False
     purchase_summary: Optional[list[str]] = None
@@ -146,6 +147,7 @@ class TableUpdate(BaseModel):
     bid_available: Optional[bool] = None
     least_bid_price: Optional[int] = 0
     is_reserved: Optional[bool] = None
+    has_reservations: Optional[bool] = None
     company_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
 

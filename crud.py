@@ -906,21 +906,45 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
 # ========================
 # RESERVATION
 # ========================
-def create_reservation(db: Session, reservation: ReservationCreate):
-    db_table = get_table(db, reservation.table_id)
+def register_reservation(
+    db: Session,
+    reservation_input: ReservationInputCreate,
+    table_id: str,
+):
+    db_table = get_table(db, table_id)
     if db_table is None:
-        return None
-    db_table.is_reserved = True
-    db_table.reserved_at = reservation.reservation_time
-
+        return "Table not found"
+    db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
-        reservation_time=reservation.reservation_time,
-        customer_name=reservation.customer_name,
-        customer_phone=reservation.customer_phone,
-        table_id=reservation.table_id,
+        table_id=table_id,
+        reservation_time=reservation_input.reservation_time,
+        customer_name=reservation_input.customer_name,
+        customer_phone=reservation_input.customer_phone,
+        bid_price=reservation_input.bid_price,  # 가격만 입력 시
+        is_fixed=reservation_input.is_fixed,
     )
-
+    db_table.has_reservations=True
     db.add(db_reservation)
+    db.flush()
+
+    # 예약 하나에 여러 예약 내역이 가능하므로 id도 for문 안에서
+    for purchase in reservation_input.purchases:
+        db_item = get_item(purchase.item_id, db)
+        if db_item is None:
+            db.rollback()  # 앞에 해둔 게 있기 때문에 롤백
+            return "Item not found"
+        now = datetime.now(UTC)
+        db_res_purchase = ReservationPurchase(
+            reservation_id=db_reservation.id,
+            item_id=purchase.item_id,
+            item_name=db_item.item_name,
+            unit_price=db_item.item_price,
+            quantity=purchase.quantity,
+            total_price=db_item.item_price * purchase.quantity,
+            created_at=now,
+        )
+        db.add(db_res_purchase)
+
     db.commit()
     db.refresh(db_reservation)
     return db_reservation
@@ -978,10 +1002,14 @@ def delete_reservation(
     if db_table is None:
         return False
 
-    db_table.is_reserved = False
     db_table.reserved_at = None
 
     db.delete(db_reservation)
+    db.flush()
+    db_left_reservations = get_reservations_by_table(db, db_table.id)
+    if not db_left_reservations:
+            db_table.has_reservations = False
+            db_table.is_reserved = False
     db.commit()
     return db_table  # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
 
@@ -1108,47 +1136,7 @@ def delete_res_purchase(
     return True
 
 
-def register_reservation(
-    db: Session,
-    reservation_input: ReservationInputCreate,
-    table_id: str,
-):
-    db_table = get_table(db, table_id)
-    if db_table is None:
-        return "Table not found"
-    db_table.reserved_at = reservation_input.reservation_time
-    db_reservation = Reservation(
-        table_id=table_id,
-        reservation_time=reservation_input.reservation_time,
-        customer_name=reservation_input.customer_name,
-        customer_phone=reservation_input.customer_phone,
-        bid_price=reservation_input.bid_price,  # 가격만 입력 시
-        is_fixed=reservation_input.is_fixed,
-    )
-    db.add(db_reservation)
-    db.flush()
 
-    # 예약 하나에 여러 예약 내역이 가능하므로 id도 for문 안에서
-    for purchase in reservation_input.purchases:
-        db_item = get_item(purchase.item_id, db)
-        if db_item is None:
-            db.rollback()  # 앞에 해둔 게 있기 때문에 롤백
-            return "Item not found"
-        now = datetime.now(UTC)
-        db_res_purchase = ReservationPurchase(
-            reservation_id=db_reservation.id,
-            item_id=purchase.item_id,
-            item_name=db_item.item_name,
-            unit_price=db_item.item_price,
-            quantity=purchase.quantity,
-            total_price=db_item.item_price * purchase.quantity,
-            created_at=now,
-        )
-        db.add(db_res_purchase)
-
-    db.commit()
-    db.refresh(db_reservation)
-    return db_reservation
 
 
 def reservation_check_in(db: Session, reservation_id: int):
@@ -1193,7 +1181,8 @@ def reservation_check_in(db: Session, reservation_id: int):
     db_table.customer = db_reservation.customer_name
     db_table.phonenumber = db_reservation.customer_phone
     db_table.status = "inuse"
-    db_table.is_reserved = not reservationEmpty
+    db_table.has_reservations = not reservationEmpty
+    db_table.is_reserved=False
     db_table.purchase_summary = [
         ", ".join(
             f"{purchase.item_name} {purchase.quantity}" for purchase in db_res_purchases
