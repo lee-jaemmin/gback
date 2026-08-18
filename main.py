@@ -656,6 +656,9 @@ async def update_reservation(
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     result = crud.update_reservation(db, reservation_update, reservation_id)
+
+    if result == "FIXED RESERVATION ALREADY EXISTS":
+        raise HTTPException(status_code=409, detail="Fixed Reservation Already Exists")
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,

@@ -970,7 +970,27 @@ def update_reservation(
     reservation_id: int,
 ):
     db_reservation = get_reservation(db, reservation_id)
-    db_table = get_table(db, db_reservation.table_id)
+    # db_table = get_table(db, db_reservation.table_id)
+    # 레이스컨디션 방지를 위해 아래와 같이 작성: with_for_update -> commit 까지 db 잠금
+    db_table = db.query(TableMaster).filter(
+        TableMaster.id == db_reservation.table_id
+    ).with_for_update().first()
+
+    if reservation_update.is_fixed is True:
+        # 중복 등록 막는 핵심 코드
+        existing_fixed = (
+            db.query(Reservation)
+            .filter(
+                Reservation.table_id == db_reservation.table_id,
+                Reservation.is_fixed.is_(True), # == true도 되지만 약간의 차이가 있음.
+                Reservation.id != reservation_id,
+                # 같은 테이블에서 현재 수정 중인 예약을 제외한 다른 확정 예약이 있는가?
+            )
+            .first()
+         )
+        if existing_fixed is not None:
+            db.rollback()
+            return "FIXED RESERVATION ALREADY EXISTS"
 
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
