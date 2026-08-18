@@ -787,8 +787,8 @@ def delete_logs_and_purchases(
                     purchase.total_price = purchase.unit_price * purchase.quantity
         if flag is False:
             return "Purchase not found"        
-    db.flush()
     db.delete(db_log)
+    db.flush()
     recalculate_table_total_price(db, db_table.id)
     db_table.purchase_summary=build_purchase_summary(db, db_table.id)
     db.commit()
@@ -1487,6 +1487,7 @@ def reset_daily_state(db: Session):
             try:
                 table_out(db, table.id, closed_reason="daily_reset")
             except Exception as e:
+                db.rollback()
                 print(f"[Daily reset error]: table_id: {table.id}, e: {e}")
 
         # 재등록용 로그 히스토리 초기화
