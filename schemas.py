@@ -403,7 +403,7 @@ class ReservationBase(BaseModel):
     customer_name: str
     customer_phone: str = ""
     bid_price: Optional[int] = 0
-
+    is_fixed: bool = False
 
 class ReservationCreate(ReservationBase):
     table_id: str
@@ -414,6 +414,7 @@ class ReservationUpdate(BaseModel):
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     bid_price: Optional[int] = None
+    is_fixed: Optional[bool] = None
 
 
 class ReservationResponse(ReservationBase):
@@ -478,6 +479,7 @@ class ReservationInputCreate(ReservationInputBase):
     customer_name: str
     customer_phone: str
     bid_price: Optional[int] = None
+    is_fixed: bool = False
     purchases: list[ReservationInputBase] = []
 
 

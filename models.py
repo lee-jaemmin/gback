@@ -270,6 +270,7 @@ class Reservation(Base):
     updated_at = Column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
+    is_fixed = Column(Boolean, nullable=False, default=False)
 
     table = relationship("TableMaster", back_populates="reservations")
 

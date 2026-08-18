@@ -950,15 +950,16 @@ def update_reservation(
 
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
-        db_table.reserved_at = reservation_update.reservation_time
+        # db_table.reserved_at = reservation_update.reservation_time
     if reservation_update.customer_name is not None:
-
         db_reservation.customer_name = reservation_update.customer_name
     if reservation_update.customer_phone is not None:
         db_reservation.customer_phone = reservation_update.customer_phone
     if reservation_update.bid_price is not None:
         db_reservation.bid_price = reservation_update.bid_price
-
+    if reservation_update.is_fixed is not None:
+            db_reservation.is_fixed = reservation_update.is_fixed
+            db_table.bid_available = not reservation_update.is_fixed
     db.commit()
     db.refresh(db_reservation)
     return db_reservation
@@ -1122,6 +1123,7 @@ def register_reservation(
         customer_name=reservation_input.customer_name,
         customer_phone=reservation_input.customer_phone,
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
+        is_fixed=reservation_input.is_fixed,
     )
     db.add(db_reservation)
     db.flush()
