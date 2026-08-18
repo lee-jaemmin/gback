@@ -761,7 +761,7 @@ def delete_logs_and_purchases(
             flag = False
             for purchase in db_purchases:
                 if purchase.item_id == db_item.id:
-                    flag=True
+                    flag = True
                     purchase.quantity -= db_log.quantity * item.quantity
                     if purchase.quantity <= 0:
                         db.delete(purchase)
@@ -770,9 +770,9 @@ def delete_logs_and_purchases(
                     break
             if flag is False:
                 db.rollback()
-                return "Purchase not found"           
-                    
-    else: #단품
+                return "Purchase not found"
+
+    else:  # 단품
         flag = False
         db_item = get_item(db_log.item_id, db)
         if db_item is None:
@@ -786,11 +786,11 @@ def delete_logs_and_purchases(
                 else:
                     purchase.total_price = purchase.unit_price * purchase.quantity
         if flag is False:
-            return "Purchase not found"        
+            return "Purchase not found"
     db.delete(db_log)
     db.flush()
     recalculate_table_total_price(db, db_table.id)
-    db_table.purchase_summary=build_purchase_summary(db, db_table.id)
+    db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
     return db_table
 
@@ -923,7 +923,7 @@ def register_reservation(
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
         is_fixed=reservation_input.is_fixed,
     )
-    db_table.has_reservations=True
+    db_table.has_reservations = True
     db.add(db_reservation)
     db.flush()
 
@@ -982,9 +982,9 @@ def update_reservation(
     if reservation_update.bid_price is not None:
         db_reservation.bid_price = reservation_update.bid_price
     if reservation_update.is_fixed is not None:
-            db_reservation.is_fixed = reservation_update.is_fixed
-            db_table.is_reserved = reservation_update.is_fixed
-            db_table.bid_available = not reservation_update.is_fixed
+        db_reservation.is_fixed = reservation_update.is_fixed
+        db_table.is_reserved = reservation_update.is_fixed
+        db_table.bid_available = not reservation_update.is_fixed
     db.commit()
     db.refresh(db_reservation)
     return db_reservation
@@ -1008,8 +1008,8 @@ def delete_reservation(
     db.flush()
     db_left_reservations = get_reservations_by_table(db, db_table.id)
     if not db_left_reservations:
-            db_table.has_reservations = False
-            db_table.is_reserved = False
+        db_table.has_reservations = False
+        db_table.is_reserved = False
     db.commit()
     return db_table  # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
 
@@ -1136,9 +1136,6 @@ def delete_res_purchase(
     return True
 
 
-
-
-
 def reservation_check_in(db: Session, reservation_id: int):
     db_reservation = get_reservation(db, reservation_id)  # 유효성 체크는 메인에서
     db_res_purchases = (
@@ -1182,7 +1179,7 @@ def reservation_check_in(db: Session, reservation_id: int):
     db_table.phonenumber = db_reservation.customer_phone
     db_table.status = "inuse"
     db_table.has_reservations = not reservationEmpty
-    db_table.is_reserved=False
+    db_table.is_reserved = False
     db_table.purchase_summary = [
         ", ".join(
             f"{purchase.item_name} {purchase.quantity}" for purchase in db_res_purchases
@@ -1535,6 +1532,9 @@ def reset_daily_state(db: Session):
                 TableMaster.timer_end_at: None,
                 TableMaster.timer_alert_sent_at: None,
                 TableMaster.bid_end_at: bid_end_at,
+                TableMaster.has_reservations: False,
+                TableMaster.bid_available: True,
+                TableMaster.reserved_at: None,
             },
             synchronize_session=False,
         )
