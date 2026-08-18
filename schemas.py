@@ -106,7 +106,7 @@ class TableBase(BaseModel):
     reserved_at: Optional[datetime] = None
 
     bid_end_at: Optional[datetime] = None
-    bid_available: Optional[bool] = False
+    bid_available: Optional[bool] = True
     least_bid_price: int = 0
 
     is_reserved: bool = False

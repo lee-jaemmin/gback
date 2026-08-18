@@ -98,7 +98,7 @@ class TableMaster(Base):
     )
 
     bid_end_at = Column(DateTime(timezone=True), nullable=True)
-    bid_available = Column(Boolean, default=False)
+    bid_available = Column(Boolean, default=True)
     least_bid_price = Column(Integer, default=0, nullable=True)
 
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
