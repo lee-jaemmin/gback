@@ -651,6 +651,7 @@ class SetMenuItemCache(BaseModel):
     set_menu_id: int
     item_id: int
     quantity: int
+    has_mixer: bool
 
     class Config:
         from_attributes = True
@@ -680,7 +681,6 @@ class CategoryCache(BaseModel):
     category_name: str
     sort_order: int
     is_active: bool
-    has_mixer: bool
 
     class Config:
         from_attributes = True
