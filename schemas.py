@@ -238,6 +238,7 @@ class ItemBase(BaseModel):
     item_name: str
     item_price: int
     category_id: int
+    has_mixer: bool = True
 
 
 class ItemCreate(ItemBase):
@@ -250,6 +251,7 @@ class ItemUpdate(BaseModel):
     item_price: Optional[int] = None
     is_active: Optional[bool] = None
     category_id: Optional[int] = None
+    has_mixer: Optional[bool] = None
 
 
 class ItemResponse(ItemBase):
@@ -579,6 +581,7 @@ class SetMenuBase(BaseModel):
     set_name: str
     set_price: int
     is_active: bool
+    has_mixer: bool = True
 
 
 class SetMenuItemInput(BaseModel):
@@ -589,7 +592,6 @@ class SetMenuItemInput(BaseModel):
 
 class SetMenuCreate(SetMenuBase):
     items: list[SetMenuItemInput]
-    
     # model에는 없지만 구성품을 보내줘야 하므로 필요함
 
 
@@ -598,6 +600,7 @@ class SetMenuUpdate(BaseModel):
     set_price: Optional[int] = None
     is_active: Optional[bool] = None
     items: Optional[list[SetMenuItemInput]] = None
+    has_mixer: Optional[bool] = None
 
 
 class SetMenuResponse(SetMenuBase):

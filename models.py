@@ -157,6 +157,7 @@ class Item(Base):
     item_name = Column(String, nullable=False)
     item_price = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    has_mixer = Column(Boolean, default=True, nullable=False)
 
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     category_id = Column(Integer, ForeignKey("item_categories.id"), nullable=False)
@@ -378,7 +379,7 @@ class SetMenu(Base):
     set_menu_items = relationship(
         "SetMenuItem", back_populates="set_menu", cascade="all, delete-orphan"
     )
-
+    has_mixer = Column(Boolean, default=True, nullable=False)
 
 class SetMenuItem(Base):
     __tablename__ = "set_menu_items"

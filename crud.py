@@ -462,6 +462,7 @@ def create_item(
         is_active=item.is_active,
         company_id=item.company_id,
         category_id=item.category_id,
+        has_mixer=item.has_mixer,
     )
 
     db.add(db_item)
@@ -527,6 +528,8 @@ def update_item(
         db_item.item_price = item_update.item_price
     if item_update.is_active is not None:
         db_item.is_active = item_update.is_active
+    if item_update.has_mixer is not None:
+        db_item.has_mixer = item_update.has_mixer
 
     db.commit()
     db.refresh(db_item)
@@ -1680,6 +1683,7 @@ def create_set_menu(db: Session, set_menu: SetMenuCreate):
         set_name=set_menu.set_name,
         set_price=set_menu.set_price,
         is_active=set_menu.is_active,
+        has_mixer=set_menu.hax_mixer
     )
 
     db.add(db_set_menu)
