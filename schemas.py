@@ -667,6 +667,7 @@ class ItemCache(BaseModel):
     item_name: str
     item_price: int
     is_active: bool
+    has_mixer: bool
     company_id: str
     category_id: int
 
@@ -679,6 +680,7 @@ class CategoryCache(BaseModel):
     category_name: str
     sort_order: int
     is_active: bool
+    has_mixer: bool
 
     class Config:
         from_attributes = True
