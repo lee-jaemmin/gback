@@ -1723,8 +1723,9 @@ def update_set_menu(
     if db_set_menu is None:
         return "SET MENU NOT FOUND"
 
-    # 구성품 비었나 검사
+    # 아이템에 변경사항 있는지 확인
     if set_menu_update.items is not None:
+        # 구성품 비었나 검사
         if not set_menu_update.items:  # []가 오면 오류.
             return "EMPTY UPDATE ITEM"
 
