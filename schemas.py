@@ -585,7 +585,7 @@ class SetMenuBase(BaseModel):
 
 
 class SetMenuItemInput(BaseModel):
-    # 세트 메뉴 아이템 수정 시 줄 스키마
+    # 세트 메뉴 아이템 생성/수정 시 줄 스키마
     item_id: int
     quantity: int
 
