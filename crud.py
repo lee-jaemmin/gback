@@ -1005,7 +1005,7 @@ def update_reservation(
     if reservation_update.is_fixed is not None:
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
-        db_table.bid_available = not reservation_update.is_fixed
+        
     db.commit()
     db.refresh(db_reservation)
     return db_reservation
