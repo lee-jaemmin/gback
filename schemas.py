@@ -642,6 +642,7 @@ class SetMenuItemUpdate(BaseModel):
 
 class SetMenuItemResponse(SetMenuItemBase):
     id: int
+    item_name: str
 
     class Config:
         from_attributes = True
