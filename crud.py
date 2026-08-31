@@ -28,9 +28,7 @@ from schemas import (
     ItemCategoryUpdate,
     ItemCreate,
     ItemUpdate,
-    TablePurchaseCreate,
     TablePurchaseUpdate,
-    ReservationCreate,
     ReservationUpdate,
     ReservationPurchaseCreate,
     ReservationPurchaseUpdate,
@@ -39,13 +37,10 @@ from schemas import (
     BidListCreate,
     BidListUpdate,
     LogHistoryCreate,
-    LogHistoryResponse,
     SetMenuCreate,
     SetMenuUpdate,
-    SetMenuResponse,
     SetMenuItemCreate,
-    SetMenuItemUpdate,
-    SetMenuItemResponse,
+    SetMenuItemInput,
 )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -1781,6 +1776,15 @@ def get_set_menu_items_by_company(
         .all()
     )
 
+def get_set_menu_item(
+    db: Session,
+    set_menu_item_id: int
+):
+    return (
+        db.query(SetMenuItem)
+        .filter(SetMenuItem.id == set_menu_item_id)
+        .first()
+    )
 
 def create_set_menu_item(
     db: Session,
@@ -1805,3 +1809,21 @@ def get_set_menu_items_by_set_menu(db: Session, set_menu_id: int):
         .all()
     )
     return ", ".join(f"{item_name} {quantity}" for item_name, quantity in rows)
+
+def update_set_menu_item(
+        db: Session,
+        set_menu_item_id: int,
+        update_set_menu_item: SetMenuItemInput
+):
+    db_set_item = get_set_menu_item(db, set_menu_item_id)
+    if db_set_item is None:
+        return None
+
+    update_data = update_set_menu_item.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(db_set_item, key, value)
+
+    db.commit()
+    db.refresh(db_set_item)
+    return db_set_item

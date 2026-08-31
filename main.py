@@ -1298,3 +1298,25 @@ def get_set_menu_item_by_set_menu(
     db: Session = Depends(get_db)
 ):
     return crud.get_set_menu_items_by_set_menu(db, set_menu_id)
+
+
+@app.patch(
+    "/companies/{company_id}/set-menu-items/{set_menu_item_id}",
+    response_model=schemas.SetMenuItemResponse,
+)
+
+def update_set_menu_item(
+    company_id: str,
+    set_menu_item_id: int,
+    set_menu_item_update: schemas.SetMenuItemUpdate,
+    db: Session = Depends(get_db),
+):
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    result = crud.update_set_menu_item(db, set_menu_item_id, set_menu_item_update)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Set Item not found")
+
+    return result
