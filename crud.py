@@ -1804,4 +1804,4 @@ def get_set_menu_items_by_set_menu(db: Session, set_menu_id: int):
         .filter(SetMenuItem.set_menu_id == set_menu_id)
         .all()
     )
-    return [f"${item_name} {quantity}" for item_name, quantity in rows]
+    return ", ".join(f"{item_name} {quantity}" for item_name, quantity in rows)

@@ -1291,3 +1291,10 @@ def update_set_menu(
         raise HTTPException(status_code=404, detail="Requested Items not found")
 
     return result
+
+@app.get("/set-menus/{set_menu_id}/items")
+def get_set_menu_item_by_set_menu(
+    set_menu_id: int,
+    db: Session = Depends(get_db)
+):
+    return crud.get_set_menu_items_by_set_menu(db, set_menu_id)
