@@ -15,6 +15,7 @@ class CompanyBase(BaseModel):
     name: str
     address: str
     region: str = ""
+    floor_image_path: Optional[str] = ""
 
 
 class CompanyCreate(CompanyBase):
@@ -26,7 +27,7 @@ class CompanyUpdate(BaseModel):
     region: Optional[str] = None
     address: Optional[str] = None
     sections: Optional[list[str]] = None
-
+    floor_image_path: Optional[str] = None
 
 class CompanyResponse(CompanyBase):
     id: str
