@@ -1030,11 +1030,21 @@ def read_history(history_id: int, db: Session = Depends(get_db)):
 @app.get(
     "/tables/{table_id}/histories", response_model=list[schemas.TableHistoryResponse]
 )
-def read_histories_by_table(table_id: str, db: Session = Depends(get_db)):
+def read_histories_by_table(
+    table_id: str,
+    business_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+):
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    return crud.get_histories_by_table(db, table_id)
+
+    target_business_date = business_date or crud.get_business_date()
+    return crud.get_histories_by_table_and_business_date(
+        db,
+        table_id,
+        target_business_date,
+    )
 
 
 @app.get(

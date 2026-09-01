@@ -1330,11 +1330,20 @@ def get_history(
     return db.query(TableHistory).filter(TableHistory.id == history_id).first()
 
 
-def get_histories_by_table(
+def get_histories_by_table_and_business_date(
     db: Session,
     table_id: str,
+    target_business_date: date,
 ):
-    return db.query(TableHistory).filter(TableHistory.table_id == table_id).all()
+    return (
+        db.query(TableHistory)
+        .filter(
+            TableHistory.table_id == table_id,
+            TableHistory.business_date == target_business_date,
+        )
+        .order_by(TableHistory.out_at.desc())
+        .all()
+    )
 
 
 def get_histories_by_company_and_business_date(
