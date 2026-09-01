@@ -784,19 +784,73 @@ async def register_reservation(
 
 
 @app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
-def read_reservation(reservation_id: int, db: Session = Depends(get_db)):
+def read_reservation(
+    reservation_id: int,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
+
+    current_user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, current_user_id)
+    if db_user is None:
+        raise HTTPException(status_code=403, detail="User not found")
+
+    is_oneself = db_reservation.created_by_id == current_user_id
+    is_company_staff = (
+        db_user.role in {"owner", "admin", "user"}
+        and db_user.company_id == db_reservation.table.company_id
+    )
+    if not (is_oneself or is_company_staff):
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
     return db_reservation
 
 
 @app.get(
     "/tables/{table_id}/reservations", response_model=list[schemas.ReservationResponse]
 )
-def read_reservations_by_table(table_id: str, db: Session = Depends(get_db)):
-    db_reservation = crud.get_reservations_by_table(db, table_id)
-    return db_reservation
+def read_reservations_by_table(
+    table_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    current_user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, current_user_id)
+    if db_user is None:
+        raise HTTPException(status_code=403, detail="User not found")
+    if (
+        db_user.role not in {"owner", "admin", "user"}
+        or db_user.company_id != db_table.company_id
+    ):
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
+    db_reservations = crud.get_reservations_by_table(db, table_id)
+    return db_reservations
+
+
+@app.get(
+    "/tables/{table_id}/reservation-bids",
+    response_model=list[schemas.ReservationBidResponse],
+)
+def read_reservation_bids_by_table(
+    table_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    current_user_id = firebase_claims["uid"]
+    if crud.get_user(db, current_user_id) is None:
+        raise HTTPException(status_code=403, detail="User not found")
+    if crud.get_table(db, table_id) is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    return crud.get_reservations_by_table(db, table_id)
 
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
