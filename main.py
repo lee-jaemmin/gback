@@ -1,8 +1,10 @@
 from fastapi import (
     BackgroundTasks,
-    FastAPI,
     Depends,
+    FastAPI,
+    File,
     HTTPException,
+    UploadFile,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -15,11 +17,14 @@ import schemas
 from database import engine, get_db, SessionLocal
 from typing import Optional
 from firebase_push import send_push_to_token
+from firebase_auth import get_verified_firebase_claims
+from firebase_storage import get_storage_bucket
 from datetime import datetime, UTC, date
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
+import uuid
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -140,6 +145,104 @@ def update_company(
 
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
+    return db_company
+
+
+FLOOR_PLAN_CONTENT_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+FLOOR_PLAN_MAX_BYTES = 5 * 1024 * 1024
+
+
+def is_valid_floor_plan_signature(content_type: str, header: bytes) -> bool:
+    if content_type == "image/jpeg":
+        return header.startswith(b"\xff\xd8\xff")
+    if content_type == "image/png":
+        return header.startswith(b"\x89PNG\r\n\x1a\n")
+    if content_type == "image/webp":
+        return header.startswith(b"RIFF") and header[8:12] == b"WEBP"
+    return False
+
+
+@app.post(
+    "/companies/{company_id}/floor-image",
+    response_model=schemas.CompanyResponse,
+)
+def upload_company_floor_plan(
+    company_id: str,
+    file: UploadFile = File(...),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims.get("uid")
+    db_user = crud.get_user(db, user_id) if user_id else None
+    if db_user is None:
+        raise HTTPException(status_code=403, detail="User not found")
+    if db_user.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Company access denied")
+    if db_user.role not in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    content_type = file.content_type or ""
+    extension = FLOOR_PLAN_CONTENT_TYPES.get(content_type)
+    if extension is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Only JPEG, PNG, and WebP images are allowed",
+        )
+
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="Image file is empty")
+    if file_size > FLOOR_PLAN_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Image file exceeds 5 MB")
+
+    header = file.file.read(12)
+    file.file.seek(0)
+    if not is_valid_floor_plan_signature(content_type, header):
+        raise HTTPException(status_code=400, detail="Invalid image file")
+
+    storage_path = (
+        f"companies/{company_id}/floor-plans/{uuid.uuid4()}.{extension}"
+    )
+    try:
+        bucket = get_storage_bucket()
+        new_blob = bucket.blob(storage_path)
+        new_blob.cache_control = "private, max-age=3600"
+        new_blob.upload_from_file(file.file, content_type=content_type)
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    except Exception:
+        raise HTTPException(status_code=502, detail="Failed to upload floor plan")
+
+    old_storage_path = db_company.floor_image_path
+    try:
+        db_company.floor_image_path = storage_path
+        db.commit()
+        db.refresh(db_company)
+    except Exception:
+        db.rollback()
+        try:
+            new_blob.delete()
+        except Exception as cleanup_error:
+            print(f"Floor plan cleanup failed: {cleanup_error}")
+        raise HTTPException(status_code=500, detail="Failed to save floor plan")
+
+    expected_prefix = f"companies/{company_id}/floor-plans/"
+    if old_storage_path and old_storage_path.startswith(expected_prefix):
+        try:
+            bucket.blob(old_storage_path).delete()
+        except Exception as cleanup_error:
+            print(f"Old floor plan cleanup failed: {cleanup_error}")
+
     return db_company
 
 
