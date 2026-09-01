@@ -19,7 +19,7 @@ from typing import Optional
 from firebase_push import send_push_to_token
 from firebase_auth import get_verified_firebase_claims
 from firebase_storage import get_storage_bucket
-from datetime import datetime, UTC, date
+from datetime import datetime, UTC, date, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
@@ -244,6 +244,52 @@ def upload_company_floor_plan(
             print(f"Old floor plan cleanup failed: {cleanup_error}")
 
     return db_company
+
+
+@app.get(
+    "/companies/{company_id}/floor-image-url",
+    response_model=schemas.FloorImageUrlResponse,
+)
+def get_company_floor_image_url(
+    company_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims.get("uid")
+    db_user = crud.get_user(db, user_id) if user_id else None
+    if db_user is None:
+        raise HTTPException(status_code=403, detail="User not found")
+    if db_user.company_id != company_id:
+        raise HTTPException(status_code=403, detail="Company access denied")
+
+    db_company = crud.get_company(db, company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    if not db_company.floor_image_path:
+        raise HTTPException(status_code=404, detail="Floor image not found")
+
+    expected_prefix = f"companies/{company_id}/floor-plans/"
+    if not db_company.floor_image_path.startswith(expected_prefix):
+        raise HTTPException(status_code=500, detail="Invalid floor image path")
+
+    try:
+        blob = get_storage_bucket().blob(db_company.floor_image_path)
+        if not blob.exists():
+            raise HTTPException(status_code=404, detail="Floor image not found")
+        expires_in = 15 * 60
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(seconds=expires_in),
+            method="GET",
+        )
+    except HTTPException:
+        raise
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error))
+    except Exception:
+        raise HTTPException(status_code=502, detail="Failed to create floor image URL")
+
+    return {"url": url, "expires_in": expires_in}
 
 
 @app.get("/companies/invite-code/{invite_code}", response_model=schemas.CompanyResponse)
