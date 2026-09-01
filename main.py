@@ -210,9 +210,7 @@ def upload_company_floor_plan(
     if not is_valid_floor_plan_signature(content_type, header):
         raise HTTPException(status_code=400, detail="Invalid image file")
 
-    storage_path = (
-        f"companies/{company_id}/floor-plans/{uuid.uuid4()}.{extension}"
-    )
+    storage_path = f"companies/{company_id}/floor-plans/{uuid.uuid4()}.{extension}"
     try:
         bucket = get_storage_bucket()
         new_blob = bucket.blob(storage_path)
@@ -750,21 +748,29 @@ def delete_log_and_purchase(
 # =====================
 # RESERVATION API
 # =====================
-@app.post("/reservations", response_model=schemas.ReservationResponse)
-async def create_reservation(
-    reservation: schemas.ReservationCreate,
-    background_tasks: BackgroundTasks,
+
+
+@app.post("/tables/{table_id}/register-reservation", response_model=schemas.ReservationResponse)
+async def register_reservation(
+    table_id: str,
+    register: schemas.ReservationCreate,
+    backgroud_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    db_table = crud.get_table(db, reservation.table_id)
+    result = crud.register_reservation(db, register, table_id)
+    if result == "User not found":
+            raise HTTPException(status_code=404, detail="User not found")
+    if result == "Table not found":
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "Table already reserved":
+        raise HTTPException(status_code=409, detail="Table already reservedßß")
+    if result == "Item not found":
+        raise HTTPException(status_code=404, detail="Item not found")
+    db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-
-    db_reservation = crud.create_reservation(db, reservation)
-    # 만들어 놔야 밑에서 쓸 수가 있음. reservation은 Create 객체라서 쓸 수 없음. 필요한 필드가 없을 수 있음.
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    background_tasks.add_task
-    (
+    backgroud_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
@@ -772,7 +778,7 @@ async def create_reservation(
             "payload": payload,
         },
     )
-    return db_reservation
+    return result
 
 
 @app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
@@ -796,6 +802,7 @@ async def update_reservation(
     reservation_update: schemas.ReservationUpdate,
     backgroud_tasks: BackgroundTasks,
     reservation_id: int,
+    current_user_id: str,
     db: Session = Depends(get_db),
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
@@ -804,10 +811,16 @@ async def update_reservation(
     db_table = crud.get_table(db, db_reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    result = crud.update_reservation(db, reservation_update, reservation_id)
-
+    result = crud.update_reservation(
+        db, reservation_update, reservation_id, current_user_id
+    )
+    if result == "CURRENT USER NOT FOUND":
+        raise HTTPException(status_code=404, detail="User not found")  
     if result == "FIXED RESERVATION ALREADY EXISTS":
         raise HTTPException(status_code=409, detail="Fixed Reservation Already Exists")
+    if result == "PERMISSION DENIED":
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
@@ -824,6 +837,7 @@ async def update_reservation(
 async def delete_reservation(
     reservation_id: int,
     backgroud_tasks: BackgroundTasks,
+    current_user_id: str,
     db: Session = Depends(get_db),
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
@@ -832,10 +846,19 @@ async def delete_reservation(
 
     company_id = db_reservation.table.company_id
 
-    result = crud.delete_reservation(db, reservation_id)
+    result = crud.delete_reservation(db, reservation_id, current_user_id)
 
-    if result is False:
-        raise HTTPException(status_code=404, detail="Reservation or Table not found")
+    if result == "CURRENT USER NOT FOUND":
+            raise HTTPException(status_code=404, detail="User not found")
+
+    if result == "RESERVATION NOT FOUND":
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    if result == "TABLE NOT FOUND":
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    if result == "PERMISSION DENIED":
+        raise HTTPException(status_code=403, detail="Permission Denied")
 
     table = result
     payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
@@ -849,35 +872,6 @@ async def delete_reservation(
     )
 
     return {"message": "Reservation deleted successfully"}
-
-
-@app.post("/tables/{table_id}/register-reservation")
-async def register_reservation(
-    table_id: str,
-    register: schemas.ReservationInputCreate,
-    backgroud_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-):
-    result = crud.register_reservation(db, register, table_id)
-    if result == "Table not found":
-        raise HTTPException(status_code=404, detail="Table not found")
-    if result == "Table already reserved":
-        raise HTTPException(status_code=409, detail="Table already reservedßß")
-    if result == "Item not found":
-        raise HTTPException(status_code=404, detail="Item not found")
-    db_table = crud.get_table(db, table_id)
-    if db_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    backgroud_tasks.add_task(
-        manager.broadcast,
-        db_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-    return result
 
 
 # =====================
@@ -1451,11 +1445,9 @@ def update_set_menu(
 
     return result
 
+
 @app.get("/set-menus/{set_menu_id}/items")
-def get_set_menu_item_by_set_menu(
-    set_menu_id: int,
-    db: Session = Depends(get_db)
-):
+def get_set_menu_item_by_set_menu(set_menu_id: int, db: Session = Depends(get_db)):
     return crud.get_set_menu_items_by_set_menu(db, set_menu_id)
 
 
@@ -1463,7 +1455,6 @@ def get_set_menu_item_by_set_menu(
     "/companies/{company_id}/set-menu-items/{set_menu_item_id}",
     response_model=schemas.SetMenuItemResponse,
 )
-
 def update_set_menu_item(
     company_id: str,
     set_menu_item_id: int,
