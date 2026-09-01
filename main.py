@@ -963,9 +963,9 @@ async def reservation_check_in(
     reservation_id: int, backgroud_tasks: BackgroundTasks, db: Session = Depends(get_db)
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
-    db_table = crud.get_table(db, db_reservation.table_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    db_table = crud.get_table(db, db_reservation.table_id)
     result = crud.reservation_check_in(db, reservation_id)
     if result == "TABLE_NOT_AVAILABLE":
         raise HTTPException(status_code=400, detail="Table is not available")
