@@ -107,6 +107,7 @@ class TableMaster(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     user_name = Column(String, nullable=True)
     purchase_summary = Column(JSON, nullable=True)
+    offer_products = Column(String, nullable=True)
 
     company = relationship("Company", back_populates="tables")
     user = relationship("User", back_populates="tables")
