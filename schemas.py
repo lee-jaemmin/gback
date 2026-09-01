@@ -405,30 +405,31 @@ class LogHistoryResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 # =========================
 # RESERVATION
 # =========================
-
+class ReservationInputBase(BaseModel):
+    item_id: int
+    quantity: int = Field(default=1, ge=1)
 
 class ReservationBase(BaseModel):
-    reservation_time: Optional[datetime] = None
+    reservation_time: datetime
     customer_name: str
-    customer_phone: str = ""
-    bid_price: Optional[int] = 0
+    customer_phone: str
+    bid_price: Optional[int] = None
     is_fixed: bool = False
+    created_by_id: str
 
 class ReservationCreate(ReservationBase):
-    table_id: str
-
-
+    purchases: list[ReservationInputBase] = Field(default_factory=list)
+    # 객체 하나 당 리스트 한 개. 중복 사용의 위험을 줄여줌.
+    
 class ReservationUpdate(BaseModel):
     reservation_time: Optional[datetime] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
     bid_price: Optional[int] = None
     is_fixed: Optional[bool] = None
-
 
 class ReservationResponse(ReservationBase):
     id: int
@@ -475,25 +476,6 @@ class ReservationPurchaseResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-# =========================
-# RESERVATIONINPUT
-# =========================
-
-
-class ReservationInputBase(BaseModel):
-    item_id: int = 0
-    quantity: int = 0
-
-
-class ReservationInputCreate(ReservationInputBase):
-    reservation_time: datetime
-    customer_name: str
-    customer_phone: str
-    bid_price: Optional[int] = None
-    is_fixed: bool = False
-    purchases: list[ReservationInputBase] = []
 
 
 # =========================
