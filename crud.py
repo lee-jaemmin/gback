@@ -908,10 +908,11 @@ def register_reservation(
     db: Session,
     reservation_input: ReservationCreate,
     table_id: str,
+    current_user_id: str,
 ):
-    db_user = get_user(db, reservation_input.created_by_id)
+    db_user = get_user(db, current_user_id)
     if db_user is None:
-        return "User not found"
+        return "CURRENT USER NOT FOUND"
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
@@ -923,7 +924,7 @@ def register_reservation(
         customer_phone=reservation_input.customer_phone,
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
         is_fixed=reservation_input.is_fixed,
-        created_by_id=reservation_input.created_by_id,
+        created_by_id=current_user_id,
     )
     db_table.has_reservations = True
     db.add(db_reservation)
@@ -982,6 +983,17 @@ def update_reservation(
         .first()
     )
 
+    db_user = get_user(db, current_user_id)  # 현재 요청자 누군지
+    if db_user is None:
+        return "CURRENT USER NOT FOUND"
+    is_oneself = db_reservation.created_by_id == current_user_id
+    is_company_staff = (
+        db_user.role in {"owner", "admin", "user"}
+        and db_user.company_id == db_table.company_id
+    )
+    if not (is_company_staff or is_oneself):
+        return "PERMISSION DENIED"
+
     if reservation_update.is_fixed is True:
         # 중복 등록 막는 핵심 코드
         existing_fixed = (
@@ -997,16 +1009,6 @@ def update_reservation(
         if existing_fixed is not None:
             db.rollback()
             return "FIXED RESERVATION ALREADY EXISTS"
-    db_user = get_user(db, current_user_id) # 현재 요청자 누군지
-    if db_user is None:
-        return "CURRENT USER NOT FOUND"
-    is_oneself = db_reservation.created_by_id == current_user_id
-    is_company_staff = (
-        db_user.role in {"owner", "admin", "user"}
-        and db_user.company_id == db_table.company_id
-    )
-    if not (is_company_staff or is_oneself):
-        return "PERMISSION DENIED"
 
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time

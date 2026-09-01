@@ -418,7 +418,6 @@ class ReservationBase(BaseModel):
     customer_phone: str
     bid_price: Optional[int] = None
     is_fixed: bool = False
-    created_by_id: str
 
 class ReservationCreate(ReservationBase):
     purchases: list[ReservationInputBase] = Field(default_factory=list)
@@ -434,6 +433,7 @@ class ReservationUpdate(BaseModel):
 class ReservationResponse(ReservationBase):
     id: int
     table_id: str
+    created_by_id: str
 
     created_at: datetime
     updated_at: datetime
