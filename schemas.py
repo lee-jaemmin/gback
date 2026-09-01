@@ -442,6 +442,14 @@ class ReservationResponse(ReservationBase):
         from_attributes = True
 
 
+class ReservationBidResponse(BaseModel):
+    id: int
+    bid_price: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
 # =========================
 # RESERVATIONPURCHASE
 # =========================
