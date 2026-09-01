@@ -16,7 +16,7 @@ class CompanyBase(BaseModel):
     address: str
     region: str = ""
     floor_image_path: Optional[str] = ""
-    offer_products: Optional[str] = ""
+
 
 
 class CompanyCreate(CompanyBase):
@@ -28,7 +28,6 @@ class CompanyUpdate(BaseModel):
     region: Optional[str] = None
     address: Optional[str] = None
     sections: Optional[list[str]] = None
-    offer_products: Optional[str] = None
 
 class CompanyResponse(CompanyBase):
     id: str
@@ -119,6 +118,7 @@ class TableBase(BaseModel):
 
     is_reserved: bool = False
     purchase_summary: Optional[list[str]] = None
+    offer_products: Optional[str] = ""
 
 
 class TableCreate(TableBase):
@@ -157,6 +157,8 @@ class TableUpdate(BaseModel):
     has_reservations: Optional[bool] = None
     company_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
+    offer_products: Optional[str] = None
+    
 
 
 class TableResponse(TableBase):
