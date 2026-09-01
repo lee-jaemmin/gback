@@ -755,11 +755,13 @@ async def register_reservation(
     table_id: str,
     register: schemas.ReservationCreate,
     backgroud_tasks: BackgroundTasks,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
-    result = crud.register_reservation(db, register, table_id)
-    if result == "User not found":
-            raise HTTPException(status_code=404, detail="User not found")
+    current_user_id = firebase_claims["uid"]
+    result = crud.register_reservation(db, register, table_id, current_user_id)
+    if result == "CURRENT USER NOT FOUND":
+        raise HTTPException(status_code=403, detail="User not found")
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already reserved":
@@ -802,9 +804,10 @@ async def update_reservation(
     reservation_update: schemas.ReservationUpdate,
     backgroud_tasks: BackgroundTasks,
     reservation_id: int,
-    current_user_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
+    current_user_id = firebase_claims["uid"]
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservaion not found")
@@ -815,7 +818,7 @@ async def update_reservation(
         db, reservation_update, reservation_id, current_user_id
     )
     if result == "CURRENT USER NOT FOUND":
-        raise HTTPException(status_code=404, detail="User not found")  
+        raise HTTPException(status_code=403, detail="User not found")
     if result == "FIXED RESERVATION ALREADY EXISTS":
         raise HTTPException(status_code=409, detail="Fixed Reservation Already Exists")
     if result == "PERMISSION DENIED":
@@ -837,9 +840,10 @@ async def update_reservation(
 async def delete_reservation(
     reservation_id: int,
     backgroud_tasks: BackgroundTasks,
-    current_user_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
+    current_user_id = firebase_claims["uid"]
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
@@ -849,7 +853,7 @@ async def delete_reservation(
     result = crud.delete_reservation(db, reservation_id, current_user_id)
 
     if result == "CURRENT USER NOT FOUND":
-            raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=403, detail="User not found")
 
     if result == "RESERVATION NOT FOUND":
         raise HTTPException(status_code=404, detail="Reservation not found")
