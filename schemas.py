@@ -76,7 +76,6 @@ class UserUpdate(BaseModel):
     company_id: Optional[str] = None
     is_push_on: Optional[bool] = None
     phonenumber: Optional[str] = None
-    phone_verified: Optional[bool] = None
 
 
 class UserResponse(UserBase):
