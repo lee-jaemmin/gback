@@ -57,6 +57,8 @@ class UserBase(BaseModel):
     fcmtoken: Optional[str] = None
     tablecardfields: List[str] = Field(default_factory=lambda: ["purchases", "persons"])
     is_push_on: bool = True
+    phonenumber: Optional[str] = None
+    phone_verified: bool = False
 
 
 class UserCreate(UserBase):
@@ -73,6 +75,8 @@ class UserUpdate(BaseModel):
     tablecardfields: Optional[List[str]] = None
     company_id: Optional[str] = None
     is_push_on: Optional[bool] = None
+    phonenumber: Optional[str] = None
+    phone_verified: Optional[bool] = None
 
 
 class UserResponse(UserBase):

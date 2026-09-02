@@ -59,8 +59,10 @@ class User(Base):
     )
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-
     company_id = Column(String, ForeignKey("companies.id"), nullable=True)
+
+    phonenumber = Column(String, nullable=True)
+    phone_verified = Column(Boolean, default=False, nullable=False)
 
     company = relationship("Company", back_populates="users")
     tables = relationship("TableMaster", back_populates="user")
