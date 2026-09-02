@@ -8,6 +8,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.middleware.cors import CORSMiddleware
 from websocket_manager import manager
 from sqlalchemy.orm import Session
 from typing import List
@@ -25,6 +26,7 @@ from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 import uuid
+import os
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -107,6 +109,22 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+### 웹 개발 때문에 잠시
+cors_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_allowed_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # =====================
