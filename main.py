@@ -275,8 +275,6 @@ def get_company_floor_image_url(
     db_user = crud.get_user(db, user_id) if user_id else None
     if db_user is None:
         raise HTTPException(status_code=403, detail="User not found")
-    if db_user.company_id != company_id:
-        raise HTTPException(status_code=403, detail="Company access denied")
 
     db_company = crud.get_company(db, company_id)
     if db_company is None:
