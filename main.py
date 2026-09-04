@@ -784,9 +784,11 @@ async def register_reservation(
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already reserved":
-        raise HTTPException(status_code=409, detail="Table already reservedßß")
+        raise HTTPException(status_code=409, detail="Table already reserved")
     if result == "Item not found":
         raise HTTPException(status_code=404, detail="Item not found")
+    if result == "TOO MANY RESERVATIONS":
+        raise HTTPException(status_code=409, detail="Too many reservations")
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")

@@ -918,6 +918,15 @@ def register_reservation(
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
+
+    if (db_user.role == "customer"):
+        count = db.query(Reservation).filter(
+            Reservation.created_by_id == db_user.id
+        ).count()
+
+        if count >= 3:
+            return "TOO MANY RESERVATIONS"
+    
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
         table_id=table_id,
