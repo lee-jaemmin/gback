@@ -217,6 +217,8 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate):
 
     return db_user
 
+## def verify_phone
+
 
 def delete_user(db: Session, user_id: str):
     db_user = get_user(db, user_id)
@@ -908,9 +910,9 @@ def register_reservation(
     db: Session,
     reservation_input: ReservationCreate,
     table_id: str,
-    current_user_id: str,
+    request_user_id: str,
 ):
-    db_user = get_user(db, current_user_id)
+    db_user = get_user(db, request_user_id)
     if db_user is None:
         return "CURRENT USER NOT FOUND"
     db_table = get_table(db, table_id)
@@ -924,7 +926,7 @@ def register_reservation(
         customer_phone=reservation_input.customer_phone,
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
         is_fixed=reservation_input.is_fixed,
-        created_by_id=current_user_id,
+        created_by_id=request_user_id,
     )
     db_table.has_reservations = True
     db.add(db_reservation)
@@ -971,7 +973,7 @@ def update_reservation(
     db: Session,
     reservation_update: ReservationUpdate,
     reservation_id: int,
-    current_user_id: str,
+    request_user_id: str, #요청자
 ):
     db_reservation = get_reservation(db, reservation_id)
     # db_table = get_table(db, db_reservation.table_id)
@@ -983,10 +985,10 @@ def update_reservation(
         .first()
     )
 
-    db_user = get_user(db, current_user_id)  # 현재 요청자 누군지
+    db_user = get_user(db, request_user_id)  # 현재 요청자 누군지
     if db_user is None:
         return "CURRENT USER NOT FOUND"
-    is_oneself = db_reservation.created_by_id == current_user_id
+    is_oneself = db_reservation.created_by_id == request_user_id
     is_company_staff = (
         db_user.role in {"owner", "admin", "user"}
         and db_user.company_id == db_table.company_id
@@ -1009,7 +1011,7 @@ def update_reservation(
         if existing_fixed is not None:
             db.rollback()
             return "FIXED RESERVATION ALREADY EXISTS"
-
+    changed_tables = []
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
         # db_table.reserved_at = reservation_update.reservation_time
@@ -1019,19 +1021,48 @@ def update_reservation(
         db_reservation.customer_phone = reservation_update.customer_phone
     if reservation_update.bid_price is not None:
         db_reservation.bid_price = reservation_update.bid_price
-    if reservation_update.is_fixed is not None:
+    if reservation_update.is_fixed is not None and is_company_staff:
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
+        if(db_table.is_reserved): # 예약이 확정되면
+            # 예약 주인의 
+            changed_tables = delete_fixed_users_reservations(db, db_reservation)
         
     db.commit()
     db.refresh(db_reservation)
-    return db_reservation
+    return db_reservation, changed_tables
+
+def delete_fixed_users_reservations(
+        db: Session,
+        reservation: Reservation,
+):
+    changed_tables = []
+    reservations_left = db.query(Reservation).filter(
+        Reservation.created_by_id == reservation.created_by_id,
+        Reservation.id != reservation.id
+    ).all()
+
+    for reservation in reservations_left:
+        db_table = get_table(db, reservation.table_id)
+        if db_table is None:
+            continue
+        db.delete(reservation)
+        db_left_reservations = get_reservations_by_table(db, db_table.id)
+        if not db_left_reservations:
+            db_table.has_reservations = False
+            db_table.is_reserved = False
+            db_table.reserved_at = None
+            changed_tables.append(db_table)
+    return changed_tables  
+    # 예약이 0가 된 테이블 리스트 반환
+
+
 
 
 def delete_reservation(
     db: Session,
     reservation_id: int,
-    current_user_id: str,
+    request_user_id: str,
 ):
     db_reservation = get_reservation(db, reservation_id)
     if db_reservation is None:
@@ -1040,10 +1071,10 @@ def delete_reservation(
     db_table = get_table(db, db_reservation.table_id)
     if db_table is None:
         return "TABLE NOT FOUND"
-    db_user = get_user(db, current_user_id) # 요청자 누군지
+    db_user = get_user(db, request_user_id) # 요청자 누군지
     if db_user is None:
         return "CURRENT USER NOT FOUND"
-    is_oneself = db_reservation.created_by_id == current_user_id
+    is_oneself = db_reservation.created_by_id == request_user_id
     is_company_staff = (
         db_user.role in {"owner", "admin", "user"}
         and db_user.company_id == db_table.company_id
