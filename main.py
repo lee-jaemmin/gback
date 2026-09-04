@@ -841,11 +841,11 @@ def read_reservations_by_table(
     db_user = crud.get_user(db, current_user_id)
     if db_user is None:
         raise HTTPException(status_code=403, detail="User not found")
-    if (
-        db_user.role not in {"owner", "admin", "user"}
-        or db_user.company_id != db_table.company_id
-    ):
-        raise HTTPException(status_code=403, detail="Permission Denied")
+    # if (
+    #     db_user.role not in {"owner", "admin", "user"}
+    #     or db_user.company_id != db_table.company_id
+    # ):
+        # raise HTTPException(status_code=403, detail="Permission Denied")
 
     db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
