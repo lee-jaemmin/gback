@@ -1047,6 +1047,7 @@ def delete_fixed_users_reservations(
         if db_table is None:
             continue
         db.delete(reservation)
+        db.flush()
         db_left_reservations = get_reservations_by_table(db, db_table.id)
         if not db_left_reservations:
             db_table.has_reservations = False
