@@ -766,7 +766,10 @@ def delete_log_and_purchase(
 # =====================
 
 
-@app.post("/tables/{table_id}/register-reservation", response_model=schemas.ReservationResponse)
+@app.post(
+    "/tables/{table_id}/register-reservation",
+    response_model=schemas.ReservationResponse,
+)
 async def register_reservation(
     table_id: str,
     register: schemas.ReservationCreate,
@@ -845,7 +848,7 @@ def read_reservations_by_table(
     #     db_user.role not in {"owner", "admin", "user"}
     #     or db_user.company_id != db_table.company_id
     # ):
-        # raise HTTPException(status_code=403, detail="Permission Denied")
+    # raise HTTPException(status_code=403, detail="Permission Denied")
 
     db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
@@ -894,6 +897,7 @@ async def update_reservation(
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=403, detail="Permission Denied")
 
+    # 확정된 테이블
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     backgroud_tasks.add_task(
         manager.broadcast,
@@ -903,7 +907,21 @@ async def update_reservation(
             "payload": payload,
         },
     )
-    return result
+
+    # 예약이 0개가 된 테이블
+    updated_reservation, changed_tables = result
+    for table in changed_tables:
+        payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+        backgroud_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "table_updated",
+                "payload": payload,
+            },
+        )
+
+    return updated_reservation
 
 
 @app.delete("/reservations/{reservation_id}")
