@@ -329,12 +329,9 @@ def regenerate_invite_code(company_id: str, db: Session = Depends(get_db)):
 # =====================
 # USER API
 # =====================
-
-
 @app.post("/users", response_model=schemas.UserResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user.id)
-    db_company = crud.get_company(db, user.company_id)
     if db_user is not None:
         raise HTTPException(status_code=400, detail="User alreay exists")
     return crud.create_user(db, user)
@@ -361,11 +358,40 @@ def get_users_by_company(
 
 @app.patch("/users/{user_id}", response_model=schemas.UserResponse)
 def update_user(
-    user_id: str, user_update: schemas.UserUpdate, db: Session = Depends(get_db)
+    user_id: str,
+    user_update: schemas.UserUpdate, 
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
 ):
+    request_user_id = firebase_claims["uid"]
+    request_user = crud.get_user(db, request_user_id)
+    if request_user is None:
+        raise HTTPException(status_code=404, detail="Request User not found")
+    target_user = crud.get_user(db, user_id)
+    if target_user is None:
+        raise HTTPException(status_code=404, detail="Target User not found")
+    is_oneself = request_user_id == user_id
+    is_admin = (
+        request_user.role in {"admin", "owner"}
+        and request_user.company_id is not None
+        and request_user.company_id == target_user.company_id
+    )
+
+    requested_fields = user_update.model_fields_set
+    sensitive_fields = {"role", "company_id"}
+
+    if requested_fields & sensitive_fields:
+        if not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Admin access required",
+        )
+    elif not (is_oneself or is_admin):
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
     db_user = crud.update_user(db, user_id, user_update)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    db.commit()
+    db.refresh(db_user)
     return db_user
 
 
@@ -782,7 +808,7 @@ async def register_reservation(
     if result == "CURRENT USER NOT FOUND":
         raise HTTPException(status_code=403, detail="User not found")
     if result == "PHONE VERIFICATION NEEDED":
-            raise HTTPException(status_code=403, detail="Phone verification needed")
+        raise HTTPException(status_code=403, detail="Phone verification needed")
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already reserved":
@@ -927,12 +953,13 @@ async def update_reservation(
 
     return updated_reservation
 
+
 @app.patch("/reservations/{reservation_id}/no-show")
 async def no_show(
     reservation_id: int,
     background_tasks: BackgroundTasks,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
@@ -950,18 +977,14 @@ async def no_show(
         raise HTTPException(status_code=404, detail="User not found")
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=403, detail="Permission Denied")
- 
+
     table = result
     payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
     background_tasks.add_task(
-        manager.broadcast,
-        company_id,
-        {
-            "type": "table_updated",
-            "payload": payload
-        }
+        manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
     )
     return {"message": "no show progress success"}
+
 
 @app.delete("/reservations/{reservation_id}")
 async def delete_reservation(
