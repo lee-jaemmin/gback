@@ -178,7 +178,7 @@ def create_user(db: Session, user: UserCreate):
         id=user.id,
         username=user.username,
         email=user.email,
-        role=user.role,
+        role="customer", #신규: 손님처리
         fcmtoken=user.fcmtoken,
         tablecardfields=user.tablecardfields,
     )
@@ -204,11 +204,7 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate):
     # 여기에는 이미 검증이 끝난 UserUpdate 객체가 들어온다.
     db_user = get_user(db, user_id)
 
-    if db_user is None:
-        return None
-
     update_data = user_update.model_dump(exclude_unset=True)
-
     for key, value in update_data.items():
         setattr(db_user, key, value)
 
