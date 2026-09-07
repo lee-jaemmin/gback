@@ -781,6 +781,8 @@ async def register_reservation(
     result = crud.register_reservation(db, register, table_id, current_user_id)
     if result == "CURRENT USER NOT FOUND":
         raise HTTPException(status_code=403, detail="User not found")
+    if result == "PHONE VERIFICATION NEEDED":
+            raise HTTPException(status_code=403, detail="Phone verification needed")
     if result == "Table not found":
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "Table already reserved":

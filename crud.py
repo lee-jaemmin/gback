@@ -217,6 +217,7 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate):
 
     return db_user
 
+
 ## def verify_phone
 
 
@@ -915,18 +916,27 @@ def register_reservation(
     db_user = get_user(db, request_user_id)
     if db_user is None:
         return "CURRENT USER NOT FOUND"
+    
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
+    is_company_staff = (
+            db_user.role in {"owner", "admin", "user"}
+            and db_user.company_id == db_table.company_id
+    )
+    if not db_user.phone_verified and db_user.role == "customer":
+        return "PHONE VERIFICATION NEEDED"
 
-    if (db_user.role == "customer"):
-        count = db.query(Reservation).filter(
-            Reservation.created_by_id == db_user.id
-        ).count()
+    if db_user.role == "customer":
+        count = (
+            db.query(Reservation)
+            .filter(Reservation.created_by_id == db_user.id)
+            .count()
+        )
 
         if count >= 3:
             return "TOO MANY RESERVATIONS"
-    
+
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
         table_id=table_id,
@@ -982,7 +992,7 @@ def update_reservation(
     db: Session,
     reservation_update: ReservationUpdate,
     reservation_id: int,
-    request_user_id: str, #요청자
+    request_user_id: str,  # 요청자
 ):
     db_reservation = get_reservation(db, reservation_id)
     # db_table = get_table(db, db_reservation.table_id)
@@ -1033,23 +1043,28 @@ def update_reservation(
     if reservation_update.is_fixed is not None and is_company_staff:
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
-        if(db_table.is_reserved): # 예약이 확정되면
-            # 예약 주인의 
+        if db_table.is_reserved:  # 예약이 확정되면
+            # 예약 주인의
             changed_tables = delete_fixed_users_reservations(db, db_reservation)
-        
+
     db.commit()
     db.refresh(db_reservation)
     return db_reservation, changed_tables
 
+
 def delete_fixed_users_reservations(
-        db: Session,
-        reservation: Reservation,
+    db: Session,
+    reservation: Reservation,
 ):
     changed_tables = []
-    reservations_left = db.query(Reservation).filter(
-        Reservation.created_by_id == reservation.created_by_id,
-        Reservation.id != reservation.id
-    ).all()
+    reservations_left = (
+        db.query(Reservation)
+        .filter(
+            Reservation.created_by_id == reservation.created_by_id,
+            Reservation.id != reservation.id,
+        )
+        .all()
+    )
 
     for reservation in reservations_left:
         db_table = get_table(db, reservation.table_id)
@@ -1063,14 +1078,14 @@ def delete_fixed_users_reservations(
             db_table.is_reserved = False
             db_table.reserved_at = None
             changed_tables.append(db_table)
-    return changed_tables  
+    return changed_tables
     # 예약이 0가 된 테이블 리스트 반환
 
 
 def no_show(
-        db: Session,
-        reservation_id: int,
-        request_user_id: str,    
+    db: Session,
+    reservation_id: int,
+    request_user_id: str,
 ):
     db_reservation = get_reservation(db, reservation_id)
     if not db_reservation.is_fixed:
@@ -1084,12 +1099,12 @@ def no_show(
     if db_requester is None:
         return "REQUEST USER NOT FOUND"
     is_company_staff = (
-            db_requester.role in {"owner", "admin", "user"}
-            and db_requester.company_id == db_table.company_id
+        db_requester.role in {"owner", "admin", "user"}
+        and db_requester.company_id == db_table.company_id
     )
     if not is_company_staff:
         return "PERMISSION DENIED"
-     
+
     ## 이번에는 손님이 직접 생성한 예약인지 직원이 생성한 예약인지 확인 후 예약 삭제
     reservation_created_by = get_user(db, db_reservation.created_by_id)
     if reservation_created_by is None:
@@ -1108,8 +1123,6 @@ def no_show(
     db.commit()
     return db_table  # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
 
-      
-    
 
 def delete_reservation(
     db: Session,
@@ -1123,7 +1136,7 @@ def delete_reservation(
     db_table = get_table(db, db_reservation.table_id)
     if db_table is None:
         return "TABLE NOT FOUND"
-    db_user = get_user(db, request_user_id) # 요청자 누군지
+    db_user = get_user(db, request_user_id)  # 요청자 누군지
     if db_user is None:
         return "CURRENT USER NOT FOUND"
     is_oneself = db_reservation.created_by_id == request_user_id
@@ -1134,7 +1147,7 @@ def delete_reservation(
 
     if not (is_company_staff or is_oneself):
         return "PERMISSION DENIED"
-    
+
     db.delete(db_reservation)
     db.flush()
     db_left_reservations = get_reservations_by_table(db, db_table.id)
@@ -1897,15 +1910,10 @@ def get_set_menu_items_by_company(
         .all()
     )
 
-def get_set_menu_item(
-    db: Session,
-    set_menu_item_id: int
-):
-    return (
-        db.query(SetMenuItem)
-        .filter(SetMenuItem.id == set_menu_item_id)
-        .first()
-    )
+
+def get_set_menu_item(db: Session, set_menu_item_id: int):
+    return db.query(SetMenuItem).filter(SetMenuItem.id == set_menu_item_id).first()
+
 
 def create_set_menu_item(
     db: Session,
