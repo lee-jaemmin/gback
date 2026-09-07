@@ -93,7 +93,7 @@ def recalculate_res_table_total_price(db: Session, table_id: str):
 # ========================
 # COMPANY
 # ========================
-def create_company(db: Session, company: CompanyCreate):
+def create_company(db: Session, company: CompanyCreate, user: User):
     invite_code = generate_invitation_code(db)
 
     db_company = Company(
@@ -107,6 +107,8 @@ def create_company(db: Session, company: CompanyCreate):
     db.add(db_company)
     db.flush()
     create_tables_for_company(db, db_company.id)
+    user.role = "owner"
+    user.company_id = db_company.id
     db.commit()
     db.refresh(db_company)  # 여기서 created_at 등 자동 정보 생성
 

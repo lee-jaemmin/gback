@@ -133,8 +133,15 @@ app.add_middleware(
 @app.post("/companies", response_model=schemas.CompanyResponse)
 def create_company(
     company: schemas.CompanyCreate,  # schema로 검사 진행 (클라이언트에서 데이터가 들어오거나 나갈 때) 입구 문지기 역할임.
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.company_id is not None:
+        raise HTTPException(status_code=404, detail="Already belongs to other Company")
     return crud.create_company(db, company)
 
 
@@ -372,11 +379,11 @@ def update_user(
         raise HTTPException(status_code=404, detail="Target User not found")
     is_oneself = request_user_id == user_id
     is_admin = (
-        request_user.role in {"admin", "owner"}
-        and request_user.company_id is not None
-        and request_user.company_id == target_user.company_id
-    )
-
+          request_user.role in {"admin", "owner"}
+          and request_user.company_id is not None
+          and request_user.company_id == target_user.company_id
+      )
+  
     requested_fields = user_update.model_fields_set
     sensitive_fields = {"role", "company_id"}
 
