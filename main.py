@@ -925,6 +925,41 @@ async def update_reservation(
 
     return updated_reservation
 
+@app.patch("/reservations/{reservation_id}/no-show")
+async def no_show(
+    reservation_id: int,
+    background_tasks: BackgroundTasks,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db)
+):
+    db_reservation = crud.get_reservation(db, reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    request_user_id = firebase_claims["uid"]
+    company_id = db_reservation.table.company_id
+
+    result = crud.no_show(db, reservation_id, request_user_id)
+
+    if result == "NOT A FIXED RESERVATION":
+        raise HTTPException(status_code=409, detail="Not a fixed Reservation")
+    if result == "TABLE NOT FOUND":
+        raise HTTPException(status_code=404, detail="Table not found")
+    if result == "REQUEST USER NOT FOUND" or result == "CREATED USER NOT FOUND":
+        raise HTTPException(status_code=404, detail="User not found")
+    if result == "PERMISSION DENIED":
+        raise HTTPException(status_code=403, detail="Permission Denied")
+ 
+    table = result
+    payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        company_id,
+        {
+            "type": "table_updated",
+            "payload": payload
+        }
+    )
+    return {"message": "no show progress success"}
 
 @app.delete("/reservations/{reservation_id}")
 async def delete_reservation(

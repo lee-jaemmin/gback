@@ -1067,7 +1067,49 @@ def delete_fixed_users_reservations(
     # 예약이 0가 된 테이블 리스트 반환
 
 
+def no_show(
+        db: Session,
+        reservation_id: int,
+        request_user_id: str,    
+):
+    db_reservation = get_reservation(db, reservation_id)
+    if not db_reservation.is_fixed:
+        return "NOT A FIXED RESERVATION"
 
+    db_table = get_table(db, db_reservation.table_id)
+    if db_table is None:
+        return "TABLE NOT FOUND"
+    ## 스태프만 노쇼 처리할 수 있게 안전장치 설정
+    db_requester = get_user(db, request_user_id)
+    if db_requester is None:
+        return "REQUEST USER NOT FOUND"
+    is_company_staff = (
+            db_requester.role in {"owner", "admin", "user"}
+            and db_requester.company_id == db_table.company_id
+    )
+    if not is_company_staff:
+        return "PERMISSION DENIED"
+     
+    ## 이번에는 손님이 직접 생성한 예약인지 직원이 생성한 예약인지 확인 후 예약 삭제
+    reservation_created_by = get_user(db, db_reservation.created_by_id)
+    if reservation_created_by is None:
+        return "CREATED USER NOT FOUND"
+    if reservation_created_by.role == "customer":
+        reservation_created_by.no_show += 1
+
+    db.delete(db_reservation)
+    db.flush()
+    db_left_reservations = get_reservations_by_table(db, db_table.id)
+    if not db_left_reservations:
+        db_table.has_reservations = False
+        db_table.is_reserved = False
+        db_table.reserved_at = None
+    db_table.is_reserved = False
+    db.commit()
+    return db_table  # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
+
+      
+    
 
 def delete_reservation(
     db: Session,
