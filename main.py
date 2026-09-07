@@ -333,6 +333,23 @@ def regenerate_invite_code(company_id: str, db: Session = Depends(get_db)):
     return result
 
 
+@app.post("/join-with-code")
+def join_company_with_code(
+    request: schemas.JoinCompanyWithCode,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.company_id is not None:
+        raise HTTPException(status_code=409, detail="Already belongs to other company")
+    result = crud.join_company_with_code(db, request, db_user)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return {"message": "joined company with code"}
+
 # =====================
 # USER API
 # =====================
@@ -366,7 +383,7 @@ def get_users_by_company(
 @app.patch("/users/{user_id}", response_model=schemas.UserResponse)
 def update_user(
     user_id: str,
-    user_update: schemas.UserUpdate, 
+    user_update: schemas.UserUpdate,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
@@ -379,11 +396,11 @@ def update_user(
         raise HTTPException(status_code=404, detail="Target User not found")
     is_oneself = request_user_id == user_id
     is_admin = (
-          request_user.role in {"admin", "owner"}
-          and request_user.company_id is not None
-          and request_user.company_id == target_user.company_id
-      )
-  
+        request_user.role in {"admin", "owner"}
+        and request_user.company_id is not None
+        and request_user.company_id == target_user.company_id
+    )
+
     requested_fields = user_update.model_fields_set
     sensitive_fields = {"role", "company_id"}
 
@@ -392,7 +409,7 @@ def update_user(
             raise HTTPException(
                 status_code=403,
                 detail="Admin access required",
-        )
+            )
     elif not (is_oneself or is_admin):
         raise HTTPException(status_code=403, detail="Permission Denied")
 

@@ -45,6 +45,8 @@ class FloorImageUrlResponse(BaseModel):
     url: str
     expires_in: int
 
+class JoinCompanyWithCode(BaseModel):
+    code: str
 
 # =========================
 # USER
@@ -78,6 +80,7 @@ class UserResponse(UserBase):
     id: str
     company_id: Optional[str] = None
     created_at: datetime
+    role: Literal["customer", "user", "admin", "owner"]
 
     class Config:
         from_attributes = True

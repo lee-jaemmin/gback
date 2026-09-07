@@ -40,7 +40,7 @@ from schemas import (
     SetMenuCreate,
     SetMenuUpdate,
     SetMenuItemCreate,
-    SetMenuItemInput,
+    JoinCompanyWithCode,
 )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -171,6 +171,18 @@ def regenerate_invite_code(db: Session, company_id: str):
     db.refresh(db_company)
     return db_company
 
+def join_company_with_code(db: Session, request: JoinCompanyWithCode, user: User):
+    db_company = get_company_by_invite_code(db, request.code)
+    if db_company is None:
+        return None
+
+    user.company_id = db_company.id
+    user.role = "user"
+
+    db.commit()
+    db.refresh(user)
+    return user
+    
 
 # ========================
 # USER
