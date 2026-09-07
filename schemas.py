@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, date
+
 
 # API 명세서
 # 요청 데이터는 ~~해야 한다. ex. id는 str이어야한다 등
@@ -53,29 +54,24 @@ class FloorImageUrlResponse(BaseModel):
 class UserBase(BaseModel):
     username: str
     email: str
-    role: str = "user"
     fcmtoken: Optional[str] = None
     tablecardfields: List[str] = Field(default_factory=lambda: ["purchases", "persons"])
     is_push_on: bool = True
-    phonenumber: Optional[str] = None
-    phone_verified: bool = False
 
 
 class UserCreate(UserBase):
     # User.id is the Firebase Auth UID, not a server-generated UUID.
     id: str
-    company_id: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[Literal["customer", "user", "admin", "owner"]] = None
     fcmtoken: Optional[str] = None
     tablecardfields: Optional[List[str]] = None
     company_id: Optional[str] = None
     is_push_on: Optional[bool] = None
-    phonenumber: Optional[str] = None
 
 
 class UserResponse(UserBase):
