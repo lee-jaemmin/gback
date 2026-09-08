@@ -19,5 +19,7 @@ def get_verified_firebase_claims(
 
     try:
         return auth.verify_id_token(credentials.credentials)
-    except Exception:
+    except Exception as e:
+        print(f"Firebase token verification failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
+
