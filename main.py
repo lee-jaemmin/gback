@@ -445,6 +445,27 @@ def set_customer_role(
     db.refresh(user)
     return user
 
+@app.post("/verify-phonenumber", response_model=schemas.UserResponse)
+def verify_phonenumber(
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user = crud.get_user(db, firebase_claims["uid"])
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    phone_number = firebase_claims.get("phone_number")
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="Verfied phonenumber not found")
+
+    user.phonenumber = phone_number
+    user.phone_verified = True
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 
 # =====================
 # TABLE API
