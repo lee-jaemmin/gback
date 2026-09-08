@@ -81,6 +81,7 @@ class UserResponse(UserBase):
     company_id: Optional[str] = None
     created_at: datetime
     role: Optional[Literal["customer", "user", "admin", "owner"]] = None
+    phone_verified: bool
 
     class Config:
         from_attributes = True
