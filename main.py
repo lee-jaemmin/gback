@@ -427,6 +427,25 @@ def delete_user(user_id: str, db: Session = Depends(get_db)):
     return {"message": "User deleted successfully"}
 
 
+@app.post("/users/set-customer", response_model=schemas.UserResponse)
+def set_customer_role(
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user = crud.get_user(db, firebase_claims["uid"])
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role is not None or user.company_id is not None:
+        raise HTTPException(status_code=409, detail="Role already selected")
+
+    user.role = "customer"
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 # =====================
 # TABLE API
 # =====================
