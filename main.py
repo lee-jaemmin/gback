@@ -142,7 +142,7 @@ def create_company(
         raise HTTPException(status_code=404, detail="User not found")
     if db_user.company_id is not None:
         raise HTTPException(status_code=404, detail="Already belongs to other Company")
-    return crud.create_company(db, company)
+    return crud.create_company(db, company, db_user)
 
 
 @app.get("/companies/{company_id}", response_model=schemas.CompanyResponse)
