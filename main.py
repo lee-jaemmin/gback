@@ -333,11 +333,11 @@ def regenerate_invite_code(company_id: str, db: Session = Depends(get_db)):
     return result
 
 
-@app.post("/join-with-code")
+@app.post("/join-with-code", response_model=schemas.UserResponse)
 def join_company_with_code(
     request: schemas.JoinCompanyWithCode,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     user_id = firebase_claims["uid"]
     db_user = crud.get_user(db, user_id)
@@ -348,7 +348,7 @@ def join_company_with_code(
     result = crud.join_company_with_code(db, request, db_user)
     if result is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    return {"message": "joined company with code"}
+    return result
 
 # =====================
 # USER API

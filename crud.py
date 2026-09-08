@@ -192,7 +192,6 @@ def create_user(db: Session, user: UserCreate):
         id=user.id,
         username=user.username,
         email=user.email,
-        role="customer", #신규: 손님처리
         fcmtoken=user.fcmtoken,
         tablecardfields=user.tablecardfields,
     )
