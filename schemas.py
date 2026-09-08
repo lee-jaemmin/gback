@@ -80,7 +80,7 @@ class UserResponse(UserBase):
     id: str
     company_id: Optional[str] = None
     created_at: datetime
-    role: Literal["customer", "user", "admin", "owner"]
+    role: Optional[Literal["customer", "user", "admin", "owner"]] = None
 
     class Config:
         from_attributes = True
