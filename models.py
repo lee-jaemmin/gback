@@ -48,7 +48,7 @@ class User(Base):
     id = Column(String, primary_key=True, index=True)
     username = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    role = Column(String, default="user", nullable=True)
+    role = Column(String, nullable=True)
     fcmtoken = Column(String, nullable=True)
     is_push_on = Column(Boolean, default=True, nullable=False)
 
