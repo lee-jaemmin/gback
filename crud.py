@@ -943,6 +943,8 @@ def register_reservation(
 
         if count >= 3:
             return "TOO MANY RESERVATIONS"
+    if not is_company_staff:
+        return "PERMISSION DENIED"
 
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(

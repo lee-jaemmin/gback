@@ -891,6 +891,8 @@ async def register_reservation(
         raise HTTPException(status_code=404, detail="Item not found")
     if result == "TOO MANY RESERVATIONS":
         raise HTTPException(status_code=409, detail="Too many reservations")
+    if result == "PERMISSION DENIED":
+            raise HTTPException(status_code=409, detail="Permission Denied")
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
