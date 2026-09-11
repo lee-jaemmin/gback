@@ -115,8 +115,6 @@ class TableBase(BaseModel):
     timer_alert_sent_at: Optional[datetime] = None
     reserved_at: Optional[datetime] = None
 
-    bid_end_at: Optional[datetime] = None
-    bid_available: Optional[bool] = True
     least_bid_price: int = 0
     has_reservations: bool = False
 
@@ -168,6 +166,8 @@ class TableUpdate(BaseModel):
 class TableResponse(TableBase):
     id: str
     company_id: str
+    bid_end_at: Optional[datetime] = None
+    bid_available: Optional[bool] = True
     user_id: Optional[str] = None
     user_name: Optional[str] = None
     created_at: datetime

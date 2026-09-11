@@ -197,7 +197,7 @@ def create_user(db: Session, user: UserCreate):
     )
 
     db.add(db_user)
-    db.commit()
+    db.commit() 
     db.refresh(db_user)
 
     return db_user
@@ -256,8 +256,6 @@ def create_table(db: Session, table: TableCreate):
         company_id=table.company_id,
         user_id=table.user_id,
         user_name=table.user_name,
-        bid_end_at=table.bid_end_at,
-        bid_available=table.bid_available,
     )
 
     db.add(db_table)
