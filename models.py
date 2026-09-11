@@ -50,8 +50,8 @@ class Company(Base):
     )
     floor_image_path = Column(String, nullable=True)
 
-    users = relationship("User", back_populates="company")
-    tables = relationship("TableMaster", back_populates="company")
+    users = relationship("User", back_populates="company", cascade="all, delete-orphan")
+    tables = relationship("TableMaster", back_populates="company", cascade="all, delete-orphan")
     items = relationship("Item", back_populates="company")
 
 
