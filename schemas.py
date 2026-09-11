@@ -25,8 +25,6 @@ class CompanyCreate(CompanyBase):
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
-    region: Optional[str] = None
-    address: Optional[str] = None
     sections: Optional[list[str]] = None
 
 class CompanyResponse(CompanyBase):
@@ -35,6 +33,8 @@ class CompanyResponse(CompanyBase):
     sections: list[str]
     updated_at: datetime
     invite_code: Optional[str] = None
+    address: str
+    region: str
 
     class Config:
         from_attributes = True
