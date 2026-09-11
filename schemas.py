@@ -15,7 +15,6 @@ from datetime import datetime, date
 class CompanyBase(BaseModel):
     name: str
     address: str
-    region: str = ""
     floor_image_path: Optional[str] = ""
 
 
