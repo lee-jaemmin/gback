@@ -39,13 +39,20 @@ class CompanyResponse(CompanyBase):
     class Config:
         from_attributes = True
 
-
 class FloorImageUrlResponse(BaseModel):
     url: str
     expires_in: int
 
 class JoinCompanyWithCode(BaseModel):
     code: str
+
+class BidToggle(BaseModel):
+    company_id: str
+    bid_available: bool
+
+class SetBidEndAtAll(BaseModel):
+    company_id: str
+    bid_end_at: datetime
 
 # =========================
 # USER

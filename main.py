@@ -337,7 +337,7 @@ def regenerate_invite_code(company_id: str, db: Session = Depends(get_db)):
 def join_company_with_code(
     request: schemas.JoinCompanyWithCode,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     user_id = firebase_claims["uid"]
     db_user = crud.get_user(db, user_id)
@@ -349,6 +349,7 @@ def join_company_with_code(
     if result is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return result
+
 
 # =====================
 # USER API
@@ -445,6 +446,7 @@ def set_customer_role(
     db.refresh(user)
     return user
 
+
 @app.post("/verify-phonenumber", response_model=schemas.UserResponse)
 def verify_phonenumber(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
@@ -464,7 +466,6 @@ def verify_phonenumber(
     db.commit()
     db.refresh(user)
     return user
-
 
 
 # =====================
@@ -514,10 +515,11 @@ async def update_table(
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    is_company_staff = (
-        db_user.company_id == db_table.company_id
-        and db_user.role in {"owner", "admin", "user"}
-    )
+    is_company_staff = db_user.company_id == db_table.company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
     if not is_company_staff:
         raise HTTPException(status_code=409, detail="Permission Denied")
     table = crud.update_table(db, table_update, table_id)
@@ -544,6 +546,57 @@ def delete_table(table_id: str, db: Session = Depends(get_db)):
     if db_table is False:
         raise HTTPException(status_code=404, detail="Table not found")
     return {"message": "Table deleted successfully"}
+
+
+@app.patch("/toggle-tables-bid")
+def toggle_tables_bid(
+    bid_toggle: schemas.BidToggle,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_company = crud.get_company(db, bid_toggle.company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    is_staff_company = (
+        db_user.company_id == db_company.id
+        and db_user.role in {"admin", "owner", "user"}
+    )
+    if not is_staff_company:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    db_tables = crud.get_tables_by_company(db, db_company.id)
+    for table in db_tables:
+        table.bid_available = bid_toggle.bid_available
+    db.commit()
+    return {"message": "toggle bid success"}
+
+@app.patch("/set-tables-bid-end-at")
+def set_tables_bid_end_at_all(
+    bid_option: schemas.SetBidEndAtAll,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_company = crud.get_company(db, bid_option.company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    is_staff_company = (
+        db_user.company_id == db_company.id
+        and db_user.role in {"admin", "owner", "user"}
+    )
+    if not is_staff_company:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    db_tables = crud.get_tables_by_company(db, db_company.id)
+    for table in db_tables:
+        table.bid_end_at = bid_option.bid_end_at
+    db.commit()
+    return {"message": "set bid end at success"}
 
 
 # =====================
@@ -892,7 +945,7 @@ async def register_reservation(
     if result == "TOO MANY RESERVATIONS":
         raise HTTPException(status_code=409, detail="Too many reservations")
     if result == "PERMISSION DENIED":
-            raise HTTPException(status_code=409, detail="Permission Denied")
+        raise HTTPException(status_code=409, detail="Permission Denied")
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
