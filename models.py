@@ -12,13 +12,26 @@ from sqlalchemy import (
     JSON,
 )
 from sqlalchemy.orm import declarative_base, relationship
-from datetime import datetime, UTC
+from datetime import datetime, UTC, time, timedelta
+from zoneinfo import ZoneInfo
 
 Base = declarative_base()
+KST = ZoneInfo("Asia/Seoul")
 
 
 def utc_now():
     return datetime.now(UTC)
+
+
+def default_bid_end_at():
+    now_kst = datetime.now(KST)
+    business_date = now_kst.date()
+
+    # 자정부터 11:59까지는 전날 18시에 시작한 영업일에 속한다.
+    if now_kst.time() < time(12, 0):
+        business_date -= timedelta(days=1)
+
+    return datetime.combine(business_date, time(22, 0), tzinfo=KST)
 
 
 class Company(Base):
@@ -101,7 +114,11 @@ class TableMaster(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
 
-    bid_end_at = Column(DateTime(timezone=True), nullable=True)
+    bid_end_at = Column(
+        DateTime(timezone=True),
+        default=default_bid_end_at,
+        nullable=True,
+    )
     bid_available = Column(Boolean, default=True)
     least_bid_price = Column(Integer, default=0, nullable=True)
     has_reservations = Column(Boolean, default=False)
