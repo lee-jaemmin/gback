@@ -1699,7 +1699,6 @@ def reset_daily_state(db: Session):
                 TableMaster.timer_alert_sent_at: None,
                 TableMaster.bid_end_at: bid_end_at,
                 TableMaster.has_reservations: False,
-                TableMaster.bid_available: True,
                 TableMaster.reserved_at: None,
             },
             synchronize_session=False,
