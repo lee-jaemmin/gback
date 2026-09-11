@@ -46,6 +46,7 @@ from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
 from zoneinfo import ZoneInfo
 import random
+import re
 import uuid
 
 KST = ZoneInfo("Asia/Seoul")
@@ -93,13 +94,65 @@ def recalculate_res_table_total_price(db: Session, table_id: str):
 # ========================
 # COMPANY
 # ========================
+def get_company_region(address: str) -> str:
+    if "이태원" in address:
+        return "이태원"
+    if "와우산" in address:
+        return "홍대"
+
+    road = re.search(
+        r"(?:^|\s)(강남대로|테헤란로|봉은사로|역삼로|도산대로|압구정로|논현로|언주로|선릉로)"
+        r"(?:(\d+)길)?\s+(\d+)(?=-|\s|$)",
+        address,
+    )
+    if re.search(r"(?:^|\s)가로수길(?:\s|$)", address):
+        return "신사/압구정"
+    if road is None:
+        return "기타"
+
+    road_name, lane_number, building_number = road.groups()
+    number = int(lane_number if lane_number is not None else building_number)
+    if lane_number is None:
+        if road_name == "강남대로" and 350 <= number <= 500:
+            return "강남"
+        if (
+            road_name == "강남대로" and 620 <= number <= 690
+            or road_name == "압구정로" and 150 <= number <= 500
+        ):
+            return "신사/압구정"
+        return "기타"
+
+    gangnam_ranges = {
+        "강남대로": (61, 118),
+        "테헤란로": (1, 15),
+        "봉은사로": (2, 20),
+        "역삼로": (1, 17),
+    }
+    sinsa_apgujeong_ranges = {
+        "강남대로": ((150, 164),),
+        "도산대로": ((1, 61),),
+        "압구정로": ((1, 60),),
+        "논현로": ((149, 165), (167, 177)),
+        "언주로": ((164, 174),),
+        "선릉로": ((153, 161),),
+    }
+    if road_name in gangnam_ranges:
+        lower, upper = gangnam_ranges[road_name]
+        if lower <= number <= upper:
+            return "강남"
+    for lower, upper in sinsa_apgujeong_ranges.get(road_name, ()):
+        if lower <= number <= upper:
+            return "신사/압구정"
+    return "기타"
+
+
 def create_company(db: Session, company: CompanyCreate, user: User):
     invite_code = generate_invitation_code(db)
 
     db_company = Company(
         id=str(uuid.uuid4()),
         name=company.name,
-        region=company.region,
+        region=get_company_region(company.address),
         address=company.address,
         invite_code=invite_code,
     )
