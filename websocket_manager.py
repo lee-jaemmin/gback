@@ -35,6 +35,7 @@ class ConnectionManager:
     async def broadcast(self, company_id: str, message: dict):
         started_at = perf_counter()
         connections = self.active_connections.get(company_id, [])
+        # [WS1, WS2, WS3 .... ]
 
         async def send(connection: WebSocket):
             try:
