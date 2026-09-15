@@ -990,8 +990,8 @@ def register_reservation(
             return "PHONE VERIFICATION NEEDED"
         count = (
                     db.query(Reservation)
-                    .filter(Reservation.created_by_id == db_user.id
-                    .count())
+                    .filter(Reservation.created_by_id == db_user.id)
+                    .count()
                 )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
