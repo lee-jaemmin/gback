@@ -984,20 +984,20 @@ def register_reservation(
             db_user.role in {"owner", "admin", "user"}
             and db_user.company_id == db_table.company_id
     )
-    if not db_user.phone_verified and db_user.role == "customer":
-        return "PHONE VERIFICATION NEEDED"
 
     if db_user.role == "customer":
+        if not db_user.phone_verified:
+            return "PHONE VERIFICATION NEEDED"
         count = (
-            db.query(Reservation)
-            .filter(Reservation.created_by_id == db_user.id)
-            .count()
-        )
-
+                    db.query(Reservation)
+                    .filter(Reservation.created_by_id == db_user.id
+                    .count())
+                )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
-    if not is_company_staff:
-        return "PERMISSION DENIED"
+    else:
+        if not is_company_staff:
+            "PERMISSION DENIED"
 
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
