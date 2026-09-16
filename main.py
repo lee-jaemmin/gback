@@ -1285,6 +1285,16 @@ async def reservation_check_in(
             "payload": payload,
         },
     )
+    background_tasks.add_task(
+            manager.broadcast,
+            db_reservation.table.company_id,
+            {
+                "type": "reservation_updated",
+                "payload": {
+                    "table_id": db_table.id
+                },
+            },
+        )
     return result
 
 
