@@ -561,10 +561,11 @@ def toggle_tables_bid(
     db_company = crud.get_company(db, bid_toggle.company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    is_staff_company = (
-        db_user.company_id == db_company.id
-        and db_user.role in {"admin", "owner", "user"}
-    )
+    is_staff_company = db_user.company_id == db_company.id and db_user.role in {
+        "admin",
+        "owner",
+        "user",
+    }
     if not is_staff_company:
         raise HTTPException(status_code=403, detail="Permission Denied")
     db_tables = crud.get_tables_by_company(db, db_company.id)
@@ -572,6 +573,7 @@ def toggle_tables_bid(
         table.bid_available = bid_toggle.bid_available
     db.commit()
     return {"message": "toggle bid success"}
+
 
 @app.patch("/set-tables-bid-end-at")
 def set_tables_bid_end_at_all(
@@ -586,10 +588,11 @@ def set_tables_bid_end_at_all(
     db_company = crud.get_company(db, bid_option.company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    is_staff_company = (
-        db_user.company_id == db_company.id
-        and db_user.role in {"admin", "owner", "user"}
-    )
+    is_staff_company = db_user.company_id == db_company.id and db_user.role in {
+        "admin",
+        "owner",
+        "user",
+    }
     if not is_staff_company:
         raise HTTPException(status_code=403, detail="Permission Denied")
     db_tables = crud.get_tables_by_company(db, db_company.id)
@@ -742,7 +745,7 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 # @app.post("/purchases", response_model=schemas.TablePurchaseResponse)
 # async def create_purchase(
 #     purchase: schemas.TablePurchaseCreate,
-#     backgroud_tasks: BackgroundTasks,
+#     background_tasks: BackgroundTasks,
 #     db: Session = Depends(get_db),
 # ):
 #     # FK check
@@ -760,7 +763,7 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 #     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
 #     company_id = db_table.company_id
 
-#     backgroud_tasks.add_task(
+#     background_tasks.add_task(
 #         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
 #     )
 
@@ -917,8 +920,6 @@ def delete_log_and_purchase(
 # =====================
 # RESERVATION API
 # =====================
-
-
 @app.post(
     "/tables/{table_id}/register-reservation",
     response_model=schemas.ReservationResponse,
@@ -926,7 +927,7 @@ def delete_log_and_purchase(
 async def register_reservation(
     table_id: str,
     register: schemas.ReservationCreate,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
@@ -949,14 +950,24 @@ async def register_reservation(
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    backgroud_tasks.add_task(
+    table_payload = schemas.TableResponse.model_validate(db_table).model_dump(
+        mode="json"
+    )
+    reservation_payload = schemas.ReservationResponse.model_validate(result).model_dump(
+        mode="json"
+    )
+    background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
             "type": "table_updated",
-            "payload": payload,
+            "payload": table_payload,
         },
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        db_table.company_id,
+        {"type": "reservation_updated", "table_id": db_table.id},
     )
     return result
 
@@ -1034,7 +1045,7 @@ def read_reservation_bids_by_table(
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
     reservation_update: schemas.ReservationUpdate,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     reservation_id: int,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
@@ -1058,7 +1069,7 @@ async def update_reservation(
 
     # 확정된 테이블
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {
@@ -1071,7 +1082,7 @@ async def update_reservation(
     updated_reservation, changed_tables = result
     for table in changed_tables:
         payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
-        backgroud_tasks.add_task(
+        background_tasks.add_task(
             manager.broadcast,
             table.company_id,
             {
@@ -1080,6 +1091,14 @@ async def update_reservation(
             },
         )
 
+    background_tasks.add_task(
+        manager.broadcast,
+        db_table.company_id,
+        {
+            "type": "reservation_updated", 
+            "table_id": db_table.id
+        },
+    )
     return updated_reservation
 
 
@@ -1112,13 +1131,22 @@ async def no_show(
     background_tasks.add_task(
         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
     )
+    background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "reservation_updated",
+                "table_id": table.id
+            },
+        )
+    
     return {"message": "no show progress success"}
 
 
 @app.delete("/reservations/{reservation_id}")
 async def delete_reservation(
     reservation_id: int,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
@@ -1145,12 +1173,20 @@ async def delete_reservation(
 
     table = result
     payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast,
         company_id,
         {
             "type": "table_updated",
             "payload": payload,
+        },
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        table.company_id,
+        {
+            "type": "reservation_updated",
+            "table_id": table.id
         },
     )
 
@@ -1239,7 +1275,7 @@ def delete_res_purchase(
     "/reservations/{reservation_id}/check-in", response_model=schemas.TableResponse
 )
 async def reservation_check_in(
-    reservation_id: int, backgroud_tasks: BackgroundTasks, db: Session = Depends(get_db)
+    reservation_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
@@ -1251,7 +1287,7 @@ async def reservation_check_in(
     if result is None:
         raise HTTPException(status_code=404, detail="Table not found")
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast,
         db_reservation.table.company_id,
         {
@@ -1385,7 +1421,7 @@ def read_history_purchases_by_history(history_id: int, db: Session = Depends(get
 async def reregister_history(
     table_id: str,
     history_id: int,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     db_table = crud.get_table(db, table_id)
@@ -1402,7 +1438,7 @@ async def reregister_history(
         raise HTTPException(status_code=409, detail="History already re-registered")
     if result is True:
         payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-        backgroud_tasks.add_task(
+        background_tasks.add_task(
             manager.broadcast,
             db_table.company_id,
             {
@@ -1421,7 +1457,7 @@ async def reregister_history(
 async def move_table(
     from_table_id: str,
     to_table_id: str,
-    backgroud_tasks: BackgroundTasks,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     db_from_table = crud.get_table(db, from_table_id)
@@ -1442,13 +1478,13 @@ async def move_table(
     if result == "TO TABLE ALREADY IN USE":
         raise HTTPException(status_code=409, detail="TO TABLE ALREADY IN USE")
     payload = schemas.TableResponse.model_validate(result).model_dump(mode="json")
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast, db_company.id, {"type": "table_updated", "payload": payload}
     )
     payload = schemas.TableResponse.model_validate(db_from_table).model_dump(
         mode="json"
     )
-    backgroud_tasks.add_task(
+    background_tasks.add_task(
         manager.broadcast, db_company.id, {"type": "table_updated", "payload": payload}
     )
     return {"message": "Table moved successfully"}
