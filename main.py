@@ -953,9 +953,6 @@ async def register_reservation(
     table_payload = schemas.TableResponse.model_validate(db_table).model_dump(
         mode="json"
     )
-    reservation_payload = schemas.ReservationResponse.model_validate(result).model_dump(
-        mode="json"
-    )
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
@@ -967,7 +964,7 @@ async def register_reservation(
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
-        {"type": "reservation_updated", "table_id": db_table.id},
+        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
     )
     return result
 
@@ -1094,10 +1091,7 @@ async def update_reservation(
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
-        {
-            "type": "reservation_updated", 
-            "table_id": db_table.id
-        },
+        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
     )
     return updated_reservation
 
@@ -1132,14 +1126,11 @@ async def no_show(
         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
     )
     background_tasks.add_task(
-            manager.broadcast,
-            table.company_id,
-            {
-                "type": "reservation_updated",
-                "table_id": table.id
-            },
-        )
-    
+        manager.broadcast,
+        table.company_id,
+        {"type": "reservation_updated", "payload": {"table_id": table.id}},
+    )
+
     return {"message": "no show progress success"}
 
 
@@ -1184,10 +1175,7 @@ async def delete_reservation(
     background_tasks.add_task(
         manager.broadcast,
         table.company_id,
-        {
-            "type": "reservation_updated",
-            "table_id": table.id
-        },
+        {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
 
     return {"message": "Reservation deleted successfully"}
@@ -1275,7 +1263,9 @@ def delete_res_purchase(
     "/reservations/{reservation_id}/check-in", response_model=schemas.TableResponse
 )
 async def reservation_check_in(
-    reservation_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+    reservation_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
