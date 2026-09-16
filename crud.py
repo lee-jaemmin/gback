@@ -185,9 +185,6 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     if company_update.name is not None:
         db_company.name = company_update.name
 
-    if company_update.region is not None:
-        db_company.region = company_update.region
-
     if company_update.sections is not None:
         db_company.sections = company_update.sections
 
