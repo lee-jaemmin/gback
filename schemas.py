@@ -15,13 +15,11 @@ from datetime import datetime, date
 class CompanyBase(BaseModel):
     name: str
     address: str
+    region: Optional[str] = ""
     floor_image_path: Optional[str] = ""
-
-
 
 class CompanyCreate(CompanyBase):
     pass
-
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
@@ -33,8 +31,6 @@ class CompanyResponse(CompanyBase):
     sections: list[str]
     updated_at: datetime
     invite_code: Optional[str] = None
-    address: str
-    region: str
 
     class Config:
         from_attributes = True
