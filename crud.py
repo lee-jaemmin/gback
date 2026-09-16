@@ -1102,12 +1102,8 @@ def update_reservation(
     if reservation_update.is_fixed is not None and is_company_staff:
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
-        if db_table.is_reserved:  # 예약이 확정되면
-            # 예약 주인의
-            if is_company_staff:
-                pass
-            else:
-                changed_tables = delete_fixed_users_reservations(db, db_reservation)
+        if db_table.is_reserved: 
+            changed_tables = delete_fixed_users_reservations(db, db_reservation)
 
     db.commit()
     db.refresh(db_reservation)
@@ -1122,7 +1118,7 @@ def delete_fixed_users_reservations(
     reservations_left = (
         db.query(Reservation)
         .filter(
-            Reservation.created_by_id == reservation.created_by_id,
+            Reservation.customer_phone == reservation.customer_phone,
             Reservation.id != reservation.id,
         )
         .all()
