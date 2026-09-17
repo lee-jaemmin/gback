@@ -435,6 +435,8 @@ class ReservationUpdate(BaseModel):
     customer_phone: Optional[str] = None
     bid_price: Optional[int] = None
     is_fixed: Optional[bool] = None
+    fixed_at: Optional[datetime] = None
+    arrival_at: Optional[datetime] = None
 
 class ReservationResponse(ReservationBase):
     id: int
@@ -443,6 +445,8 @@ class ReservationResponse(ReservationBase):
 
     created_at: datetime
     updated_at: datetime
+    fixed_at: Optional[datetime]
+    arrival_at: Optional[datetime]
 
     class Config:
         from_attributes = True

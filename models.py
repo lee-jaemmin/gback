@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     JSON,
+    Enum
 )
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, UTC, time, timedelta
@@ -283,7 +284,7 @@ class Reservation(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    created_by_id = Column(String, ForeignKey("users.id"), nullable=False)
+    created_by_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
 
     reservation_time = Column(DateTime(timezone=True), nullable=True)
     bid_price = Column(Integer, default=0, nullable=True)
@@ -296,6 +297,8 @@ class Reservation(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
     is_fixed = Column(Boolean, nullable=False, default=False)
+    fixed_at = Column(DateTime(timezone=True), nullable=True)
+    arrival_at = Column(DateTime(timezone=True), nullable=True)
 
     table = relationship("TableMaster", back_populates="reservations")
 
