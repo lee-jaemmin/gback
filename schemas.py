@@ -85,6 +85,7 @@ class UserResponse(UserBase):
     role: Optional[Literal["customer", "user", "admin", "owner"]] = None
     phone_verified: bool
     phonenumber: Optional[str]
+    no_show: int
 
     class Config:
         from_attributes = True
