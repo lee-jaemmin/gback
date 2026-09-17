@@ -1043,7 +1043,7 @@ def get_reservation(
     return db.query(Reservation).filter(Reservation.id == reservation_id).first()
 
 
-def reservation_under(db: Session, user_id: str):
+def reservation_under(db: Session, user_id: str):    
     return (
         db.query(Reservation)
         .filter(
