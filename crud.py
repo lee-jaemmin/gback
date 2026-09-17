@@ -116,8 +116,10 @@ def get_company_region(address: str) -> str:
         if road_name == "강남대로" and 350 <= number <= 500:
             return "강남"
         if (
-            road_name == "강남대로" and 620 <= number <= 690
-            or road_name == "압구정로" and 150 <= number <= 500
+            road_name == "강남대로"
+            and 620 <= number <= 690
+            or road_name == "압구정로"
+            and 150 <= number <= 500
         ):
             return "신사/압구정"
         return "기타"
@@ -221,6 +223,7 @@ def regenerate_invite_code(db: Session, company_id: str):
     db.refresh(db_company)
     return db_company
 
+
 def join_company_with_code(db: Session, request: JoinCompanyWithCode, user: User):
     db_company = get_company_by_invite_code(db, request.code)
     if db_company is None:
@@ -232,7 +235,7 @@ def join_company_with_code(db: Session, request: JoinCompanyWithCode, user: User
     db.commit()
     db.refresh(user)
     return user
-    
+
 
 # ========================
 # USER
@@ -247,7 +250,7 @@ def create_user(db: Session, user: UserCreate):
     )
 
     db.add(db_user)
-    db.commit() 
+    db.commit()
     db.refresh(db_user)
 
     return db_user
@@ -973,23 +976,23 @@ def register_reservation(
     db_user = get_user(db, request_user_id)
     if db_user is None:
         return "CURRENT USER NOT FOUND"
-    
+
     db_table = get_table(db, table_id)
     if db_table is None:
         return "Table not found"
     is_company_staff = (
-            db_user.role in {"owner", "admin", "user"}
-            and db_user.company_id == db_table.company_id
+        db_user.role in {"owner", "admin", "user"}
+        and db_user.company_id == db_table.company_id
     )
 
     if db_user.role == "customer":
         if not db_user.phone_verified:
             return "PHONE VERIFICATION NEEDED"
         count = (
-                    db.query(Reservation)
-                    .filter(Reservation.created_by_id == db_user.id)
-                    .count()
-                )
+            db.query(Reservation)
+            .filter(Reservation.created_by_id == db_user.id)
+            .count()
+        )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
     else:
@@ -1038,6 +1041,18 @@ def get_reservation(
     reservation_id: int,
 ):
     return db.query(Reservation).filter(Reservation.id == reservation_id).first()
+
+
+def reservation_under(db: Session, user_id: str):
+    return (
+        db.query(Reservation)
+        .filter(
+            Reservation.created_by_id == user_id,
+            Reservation.is_fixed.is_(True),
+            Reservation.arrival_at.is_(None),
+        )
+        .first()
+    )
 
 
 def get_reservations_by_table(
@@ -1099,11 +1114,22 @@ def update_reservation(
         db_reservation.customer_phone = reservation_update.customer_phone
     if reservation_update.bid_price is not None:
         db_reservation.bid_price = reservation_update.bid_price
-    if reservation_update.is_fixed is not None and is_company_staff:
+    if (
+        reservation_update.is_fixed is not None
+        and is_company_staff
+        and reservation_update.is_fixed != db_reservation.is_fixed
+    ):
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
-        if db_table.is_reserved: 
+        if reservation_update.is_fixed:
+            db_reservation.fixed_at = datetime.now(UTC)
+        else:
+            db_reservation.fixed_at = None
+            db_reservation.arrival_at = None
+        if db_table.is_reserved:
             changed_tables = delete_fixed_users_reservations(db, db_reservation)
+    if db_reservation.is_fixed and reservation_update.arrival_at is not None:
+        db_reservation.arrival_at = reservation_update.arrival_at
 
     db.commit()
     db.refresh(db_reservation)

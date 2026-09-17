@@ -1038,6 +1038,15 @@ def read_reservation_bids_by_table(
 
     return crud.get_reservations_by_table(db, table_id)
 
+@app.get("/reservations-under")
+def reservations_under(
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db)
+):
+    user_id = firebase_claims["uid"]
+    result = crud.reservation_under(db, user_id)
+    return result is not None
+
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
