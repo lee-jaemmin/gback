@@ -467,6 +467,34 @@ def verify_phonenumber(
     db.refresh(user)
     return user
 
+@app.post("/remove/{target_user_id}", response_model=schemas.UserResponse)
+def kick_user(
+    target_user_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+) : 
+    user_id = firebase_claims["uid"]
+    requester = crud.get_user(db, user_id)
+    if requester is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if requester.role != "owner":
+        raise HTTPException(status_code=403, detail="Permission denied")
+    target = crud.get_user(db, target_user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_same_company = (
+        requester.company_id is not None
+        and target.company_id is not None
+        and requester.company_id == target.company_id
+    )
+    if not is_same_company:
+        raise HTTPException(status_code=409, detail="Not a same company")
+    target.company_id = None
+    target.role = None
+    db.commit()
+    db.refresh(target)
+    return target
 
 # =====================
 # TABLE API
