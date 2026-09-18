@@ -41,6 +41,7 @@ from schemas import (
     SetMenuUpdate,
     SetMenuItemCreate,
     JoinCompanyWithCode,
+    PurchaseBatchCreate
 )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -856,11 +857,8 @@ def delete_logs_and_purchases(
     return db_table
 
 
-def register_purchase(db: Session, log: TablePurchaseLogCreate):
-    db_user = get_user(db, log.user_id)
-    if db_user is None:
-        return "USER NOT FOUND"
-    db_table = get_table(db, log.table_id)
+def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
+    db_table = get_table(db, purchases.table_id)
     if db_table is None:
         return "TABLE NOT FOUND"
 
@@ -868,96 +866,100 @@ def register_purchase(db: Session, log: TablePurchaseLogCreate):
         db_table.status = "inuse"
         db_table.registered_at = datetime.now(UTC)
 
-    # 단품
-    if log.set_menu_id is None:
-        item = get_item(log.item_id, db)
-        if item is None:
-            return "ITEM NOT FOUND"
-        db_log = TablePurchaseLog(
-            table_id=log.table_id,
-            item_id=item.id,
-            item_name=item.item_name,
-            set_menu_id=None,
-            quantity=log.quantity,
-            unit_price=item.item_price,
-            total_price=item.item_price * log.quantity,
-            user_id=log.user_id,
-            user_name=db_user.username,
-            batch_id=log.batch_id,
-            created_at=datetime.now(UTC),
-        )
-        existing_purchase = (
-            db.query(TablePurchase)
-            .filter(
-                TablePurchase.item_id == item.id, TablePurchase.table_id == db_table.id
-            )
-            .first()
-        )
-        if existing_purchase is not None:
-            existing_purchase.quantity += log.quantity
-            existing_purchase.total_price = existing_purchase.quantity * item.item_price
-        else:
-            db_purchase = TablePurchase(
-                table_id=log.table_id,
+    for purchase in purchases.items:
+        # 단품
+        if purchase.set_menu_id is None:
+            item = get_item(purchase.item_id, db)
+            if item is None:
+                return "ITEM NOT FOUND"
+            db_log = TablePurchaseLog(
+                table_id=purchases.table_id,
                 item_id=item.id,
                 item_name=item.item_name,
-                quantity=log.quantity,
+                set_menu_id=None,
+                quantity=purchase.quantity,
                 unit_price=item.item_price,
-                total_price=item.item_price * log.quantity,
+                total_price=item.item_price * purchase.quantity,
+                user_id=user.id,
+                user_name=user.username,
+                batch_id=purchases.batch_id,
                 created_at=datetime.now(UTC),
             )
-            db.add(db_purchase)
-    else:  # 세트
-        set_menu = get_set_menu(db, log.set_menu_id, db_table.company_id)
-
-        if set_menu is None:
-            return "SET MENU NOT FOUND"
-        db_log = TablePurchaseLog(
-            table_id=log.table_id,
-            item_id=None,
-            item_name=set_menu.set_name,
-            set_menu_id=log.set_menu_id,
-            quantity=log.quantity,
-            unit_price=set_menu.set_price,
-            total_price=set_menu.set_price * log.quantity,
-            user_id=log.user_id,
-            user_name=db_user.username,
-            batch_id=log.batch_id,
-            created_at=datetime.now(UTC),
-        )
-        for component in set_menu.set_menu_items:
-            db_item = get_item(component.item_id, db)
-            if db_item is None:
-                db.rollback()
-                return "SET MENU ITEM NOT FOUND"
+            ## TablePurchase 집계 시작: 중복 구매 or not
             existing_purchase = (
                 db.query(TablePurchase)
                 .filter(
-                    TablePurchase.item_id == db_item.id,
-                    TablePurchase.table_id == db_table.id,
+                    TablePurchase.item_id == item.id, TablePurchase.table_id == db_table.id
                 )
                 .first()
             )
             if existing_purchase is not None:
-                added_quantity = log.quantity * component.quantity
-                existing_purchase.quantity += added_quantity
-                existing_purchase.total_price = (
-                    existing_purchase.quantity * db_item.item_price
-                )
+                existing_purchase.quantity += purchase.quantity
+                existing_purchase.total_price = existing_purchase.quantity * item.item_price
             else:
                 db_purchase = TablePurchase(
-                    table_id=log.table_id,
-                    item_id=db_item.id,
-                    item_name=db_item.item_name,
-                    quantity=component.quantity * log.quantity,
-                    unit_price=db_item.item_price,
-                    total_price=db_item.item_price * component.quantity * log.quantity,
+                    table_id=purchases.table_id,
+                    item_id=item.id,
+                    item_name=item.item_name,
+                    quantity=purchase.quantity,
+                    unit_price=item.item_price,
+                    total_price=item.item_price * purchase.quantity,
                     created_at=datetime.now(UTC),
                 )
                 db.add(db_purchase)
-    db.add(db_log)
-    db.flush()
+                db.flush()
+            db.add(db_log)
+        else:  # 세트
+            set_menu = get_set_menu(db, purchase.set_menu_id, db_table.company_id)
 
+            if set_menu is None:
+                return "SET MENU NOT FOUND"
+            db_log = TablePurchaseLog(
+                table_id=purchases.table_id,
+                item_id=None,
+                item_name=set_menu.set_name,
+                set_menu_id=purchase.set_menu_id,
+                quantity=purchase.quantity,
+                unit_price=set_menu.set_price,
+                total_price=set_menu.set_price * purchase.quantity,
+                user_id=user.id,
+                user_name=user.username,
+                batch_id=purchases.batch_id,
+                created_at=datetime.now(UTC),
+            )
+            for component in set_menu.set_menu_items:
+                db_item = get_item(component.item_id, db)
+                if db_item is None:
+                    db.rollback()
+                    return "SET MENU ITEM NOT FOUND"
+                existing_purchase = (
+                    db.query(TablePurchase)
+                    .filter(
+                        TablePurchase.item_id == db_item.id,
+                        TablePurchase.table_id == db_table.id,
+                    )
+                    .first()
+                )
+                if existing_purchase is not None:
+                    added_quantity = purchase.quantity * component.quantity
+                    existing_purchase.quantity += added_quantity
+                    existing_purchase.total_price = (
+                        existing_purchase.quantity * db_item.item_price
+                    )
+                else:
+                    db_purchase = TablePurchase(
+                        table_id=purchases.table_id,
+                        item_id=db_item.id,
+                        item_name=db_item.item_name,
+                        quantity=component.quantity * purchase.quantity,
+                        unit_price=db_item.item_price,
+                        total_price=db_item.item_price * component.quantity * purchase.quantity,
+                        created_at=datetime.now(UTC),
+                    )
+                    db.add(db_purchase)
+                    db.flush()
+            db.add(db_log)
+    db.flush()
     recalculate_table_total_price(db, db_table.id)
     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()

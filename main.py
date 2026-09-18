@@ -497,7 +497,7 @@ def kick_user(
     return target
 
 @app.post("/change-owner/{target_user_id}", response_model=schemas.UserResponse)
-def change_user_owner(
+def change_owner(
     target_user_id: str,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
@@ -522,7 +522,7 @@ def change_user_owner(
     target.role = "owner"
     requester.role = "admin"
     db.commit()
-    db.refresh(target)
+    db.refresh(requester)
     return requester
 
 # =====================
@@ -831,21 +831,27 @@ def delete_item(item_id: int, db: Session = Depends(get_db)):
 
 @app.post("/register-purchase")
 async def register_purchase(
-    log: schemas.TablePurchaseLogCreate,
+    purchases: schemas.PurchaseBatchCreate,
     background_tasks: BackgroundTasks,
+    firebase_claim: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
-
-    result = crud.register_purchase(db, log)
-    db_table = crud.get_table(db, log.table_id)
+    user_id = firebase_claim["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_table = crud.get_table(db, purchases.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    if db_user.company_id != db_table.company_id or db_user.role not in {"owner", "admin", "user"}:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    result = crud.register_purchase(db, purchases, db_user)
     if result == "ITEM NOT FOUND":
         raise HTTPException(status_code=404, detail="Item not found")
-    if result == "USER NOT FOUND":
-        raise HTTPException(status_code=404, detail="User not found")
     if result == "SET MENU NOT FOUND":
         raise HTTPException(status_code=404, detail="Set menu not found")
+    if result == "SET MENU ITEM NOT FOUND":
+        raise HTTPException(status_code=404, detail="Set menu item not found")
 
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
 

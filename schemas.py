@@ -324,6 +324,21 @@ class TablePurchaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class PurchaseBatchItem(BaseModel):
+    item_id: Optional[int] = None
+    set_menu_id: Optional[int] = None
+    quantity: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def validate_menu(self):
+        if (self.item_id is None) == (self.set_menu_id is None):
+            raise ValueError("item_id 또는 set_menu_id 중 하나만 지정해야 합니다.")
+        return self
+    
+class PurchaseBatchCreate(BaseModel):
+    table_id: str
+    batch_id: str
+    items: list[PurchaseBatchItem] = Field(min_length=1)
 
 # =========================
 # TABLEPURCHASELOG
