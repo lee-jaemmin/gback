@@ -596,6 +596,8 @@ def set_tables_bid_end_at_all(
     if not is_staff_company:
         raise HTTPException(status_code=403, detail="Permission Denied")
     db_tables = crud.get_tables_by_company(db, db_company.id)
+    if any(table.is_reserved for table in db_tables):
+        raise HTTPException(status_code=409, detail="Table already reserved")
     for table in db_tables:
         table.bid_end_at = bid_option.bid_end_at
     db.commit()
