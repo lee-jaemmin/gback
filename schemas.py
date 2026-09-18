@@ -71,7 +71,6 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
-    role: Optional[Literal["customer", "user", "admin", "owner"]] = None
     fcmtoken: Optional[str] = None
     tablecardfields: Optional[List[str]] = None
     is_push_on: Optional[bool] = None
@@ -80,6 +79,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: str
     company_id: Optional[str] = None
+    role: Optional[Literal["customer", "user", "admin", "owner"]] = None
     created_at: datetime
     phone_verified: bool
     phonenumber: Optional[str]
