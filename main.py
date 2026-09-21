@@ -26,6 +26,7 @@ from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 import uuid
+import solapi_alimtalk
 import os
 
 models.Base.metadata.create_all(bind=engine)
@@ -1124,18 +1125,28 @@ async def update_reservation(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
-    current_user_id = firebase_claims["uid"]
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
-        raise HTTPException(status_code=404, detail="Reservaion not found")
+        raise HTTPException(status_code=404, detail="Reservaion not foun")
+    previous_fixed_at = db_reservation.fixed_at
+    # fixed_at이 none -> not none으로 바뀐 예약에만 알림톡 전송
+    reservation_user = crud.get_user(db, db_reservation.created_by_id)
+    if reservation_user is None:
+        raise HTTPException(status_code=403, detail="Reservation User not found")
+
     db_table = crud.get_table(db, db_reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    result = crud.update_reservation(
-        db, reservation_update, reservation_id, current_user_id
-    )
-    if result == "CURRENT USER NOT FOUND":
+
+    requester_id = firebase_claims["uid"]
+    requester = crud.get_user(db, requester_id)
+    if requester is None:
         raise HTTPException(status_code=403, detail="User not found")
+
+    result = crud.update_reservation(
+        db, reservation_update, reservation_id, requester_id
+    )
+        
     if result == "FIXED RESERVATION ALREADY EXISTS":
         raise HTTPException(status_code=409, detail="Fixed Reservation Already Exists")
     if result == "PERMISSION DENIED":
@@ -1152,8 +1163,13 @@ async def update_reservation(
         },
     )
 
-    # 예약이 0개가 된 테이블
     updated_reservation, changed_tables = result
+    just_fixed = (
+        previous_fixed_at is None 
+        and updated_reservation.fixed_at is not None
+    )
+
+    # 예약이 0개가 된 테이블
     for table in changed_tables:
         payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
         background_tasks.add_task(
@@ -1165,6 +1181,19 @@ async def update_reservation(
             },
         )
 
+    if just_fixed and reservation_user.role == 'customer':
+        db_company = crud.get_company(db, db_table.company_id)
+        background_tasks.add_task(
+            solapi_alimtalk.send_alimtalk,
+            reservation_user.phonenumber,
+            "[실제 템플릿 id]",
+            "[실제 pf id]",
+            {
+                "매장명": db_company.name,
+                "테이블이름:": db_table.tablename,
+            }
+        )
+        
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
