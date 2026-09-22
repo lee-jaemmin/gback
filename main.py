@@ -115,9 +115,9 @@ cors_allowed_origins = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "https://tablebid.kr", "https://tablebid-chi.vercel.app",
+        "https://tablebid.kr,https://tablebid-chi.vercel.app",
     ).split(",")
-    if origin.strip()
+        if origin.strip()
 ]
 
 app.add_middleware(
