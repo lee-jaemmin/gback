@@ -1197,8 +1197,8 @@ async def update_reservation(
             background_tasks.add_task(
                 solapi_alimtalk.send_alimtalk,
                 reservation_user.phonenumber,
-                "[실제 템플릿 id]",
-                "[실제 pf id]",
+                "KA01TP260918001413298TOpXYrgbaAL",
+                "KA01PF260917045443138PqRAzw6E07o",
                 {
                     "#{매장명}": db_company.name,
                     "#{테이블이름}": db_table.tablename,
