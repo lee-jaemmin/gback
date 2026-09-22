@@ -1079,6 +1079,8 @@ def update_reservation(
         .with_for_update()
         .first()
     )
+    db.refresh(db_reservation)
+    just_fixed = False
 
     db_user = get_user(db, request_user_id)  # 현재 요청자 누군지
     if db_user is None:
@@ -1125,6 +1127,7 @@ def update_reservation(
         db_table.is_reserved = reservation_update.is_fixed
         if reservation_update.is_fixed:
             db_reservation.fixed_at = datetime.now(UTC)
+            just_fixed = True
         else:
             db_reservation.fixed_at = None
             db_reservation.arrival_at = None
@@ -1135,7 +1138,7 @@ def update_reservation(
 
     db.commit()
     db.refresh(db_reservation)
-    return db_reservation, changed_tables
+    return db_reservation, changed_tables, just_fixed
 
 
 def delete_fixed_users_reservations(

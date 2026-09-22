@@ -1135,7 +1135,6 @@ async def update_reservation(
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservaion not foun")
-    previous_fixed_at = db_reservation.fixed_at
     # fixed_at이 none -> not none으로 바뀐 예약에만 알림톡 전송
     reservation_user = crud.get_user(db, db_reservation.created_by_id)
     if reservation_user is None:
@@ -1170,8 +1169,7 @@ async def update_reservation(
         },
     )
 
-    updated_reservation, changed_tables = result
-    just_fixed = previous_fixed_at is None and updated_reservation.fixed_at is not None
+    updated_reservation, changed_tables, just_fixed = result
 
     # 예약이 0개가 된 테이블
     for table in changed_tables:
