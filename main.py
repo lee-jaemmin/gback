@@ -1277,7 +1277,7 @@ async def no_show(
             noshow_user.phonenumber,
             "KA01TP26091800592800836Ki9hg280T",
             "KA01PF260917045443138PqRAzw6E07o",
-            {"#{매장명}": db_company.name, "#{테이블이름}": table.tablename},
+            {"#{매장명}": db_company.name, "#{테이블번호}": table.tablename},
         )
     return {"message": "no show progress success"}
 
