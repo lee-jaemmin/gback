@@ -1106,6 +1106,7 @@ def update_reservation(
     )
     db.refresh(db_reservation)
     just_fixed = False
+    outbid_reservation = None
 
     db_user = get_user(db, request_user_id)  # 현재 요청자 누군지
     if db_user is None:
@@ -1142,6 +1143,22 @@ def update_reservation(
     if reservation_update.customer_phone is not None:
         db_reservation.customer_phone = reservation_update.customer_phone
     if reservation_update.bid_price is not None:
+        top_reservation = (
+            db.query(Reservation)
+            .filter(Reservation.table_id == db_table.id)
+            .order_by(
+                Reservation.bid_price.desc().nulls_last(),
+                Reservation.id.asc(),
+            )
+            .first()
+        )
+        if (
+            top_reservation is not None
+            and top_reservation.id != db_reservation.id
+            and reservation_update.bid_price > (db_reservation.bid_price or 0)
+            and reservation_update.bid_price > (top_reservation.bid_price or 0)
+        ):
+            outbid_reservation = top_reservation
         db_reservation.bid_price = reservation_update.bid_price
     if (
         reservation_update.is_fixed is not None
@@ -1163,7 +1180,7 @@ def update_reservation(
 
     db.commit()
     db.refresh(db_reservation)
-    return db_reservation, changed_tables, just_fixed
+    return db_reservation, changed_tables, just_fixed, outbid_reservation
 
 
 def delete_fixed_users_reservations(
