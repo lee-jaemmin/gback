@@ -1235,10 +1235,15 @@ async def no_show(
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    noshow_user = crud.get_user(db, db_reservation.created_by_id)
+    if noshow_user is None:
+        raise HTTPException(status_code=404, detail="no show user not found")
     request_user_id = firebase_claims["uid"]
+    db_requester = crud.get_user(db, request_user_id)
+    if db_requester is None:
+        raise HTTPException(status_code=404, detail="requester not found")
     company_id = db_reservation.table.company_id
-
-    result = crud.no_show(db, reservation_id, request_user_id)
+    result = crud.no_show(db, reservation_id, db_requester)
 
     if result == "NOT A FIXED RESERVATION":
         raise HTTPException(status_code=409, detail="Not a fixed Reservation")
@@ -1258,6 +1263,17 @@ async def no_show(
         manager.broadcast,
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
+    )
+    db_company = crud.get_company(db, company_id)
+    background_tasks.add_task(
+            solapi_alimtalk.send_alimtalk,
+            noshow_user.phonenumber,
+            "KA01TP26091800592800836Ki9hg280T",
+            "KA01PF260917045443138PqRAzw6E07o",
+            {
+                "#{매장명}": db_company,
+                "#{테이블이름}": table.tablename
+            }
     )
 
     return {"message": "no show progress success"}

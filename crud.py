@@ -1199,7 +1199,7 @@ def delete_fixed_users_reservations(
 def no_show(
     db: Session,
     reservation_id: int,
-    request_user_id: str,
+    user: User
 ):
     db_reservation = get_reservation(db, reservation_id)
     if not db_reservation.is_fixed:
@@ -1209,12 +1209,9 @@ def no_show(
     if db_table is None:
         return "TABLE NOT FOUND"
     ## 스태프만 노쇼 처리할 수 있게 안전장치 설정
-    db_requester = get_user(db, request_user_id)
-    if db_requester is None:
-        return "REQUEST USER NOT FOUND"
     is_company_staff = (
-        db_requester.role in {"owner", "admin", "user"}
-        and db_requester.company_id == db_table.company_id
+        user.role in {"owner", "admin", "user"}
+        and user.company_id == db_table.company_id
     )
     if not is_company_staff:
         return "PERMISSION DENIED"
