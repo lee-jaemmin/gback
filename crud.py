@@ -1119,7 +1119,7 @@ def update_reservation(
     if (
         reservation_update.is_fixed is not None
         and is_company_staff
-        and reservation_update.is_fixed != db_reservation.is_fixed
+        and reservation_update.is_fixed != db_reservation.is_fixed # 등록 / 취소
     ):
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
