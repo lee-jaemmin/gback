@@ -468,12 +468,13 @@ def verify_phonenumber(
     db.refresh(user)
     return user
 
+
 @app.post("/remove/{target_user_id}", response_model=schemas.UserResponse)
 def kick_user(
     target_user_id: str,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
-) : 
+):
     user_id = firebase_claims["uid"]
     requester = crud.get_user(db, user_id)
     if requester is None:
@@ -497,12 +498,13 @@ def kick_user(
     db.refresh(target)
     return target
 
+
 @app.post("/change-owner/{target_user_id}", response_model=schemas.UserResponse)
 def change_owner(
     target_user_id: str,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
-) : 
+):
     user_id = firebase_claims["uid"]
     requester = crud.get_user(db, user_id)
     if requester is None:
@@ -525,6 +527,7 @@ def change_owner(
     db.commit()
     db.refresh(requester)
     return requester
+
 
 # =====================
 # TABLE API
@@ -844,7 +847,11 @@ async def register_purchase(
     db_table = crud.get_table(db, purchases.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    if db_user.company_id != db_table.company_id or db_user.role not in {"owner", "admin", "user"}:
+    if db_user.company_id != db_table.company_id or db_user.role not in {
+        "owner",
+        "admin",
+        "user",
+    }:
         raise HTTPException(status_code=403, detail="Permission denied")
     result = crud.register_purchase(db, purchases, db_user)
     if result == "ITEM NOT FOUND":
@@ -1104,17 +1111,17 @@ def read_reservation_bids_by_table(
 
     return crud.get_reservations_by_table(db, table_id)
 
+
 @app.get("/reservations-under")
 def reservations_under(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     user_id = firebase_claims["uid"]
     db_user = crud.get_user(db, user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return crud.reservation_under(db, user_id)
-    
 
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
@@ -1146,7 +1153,7 @@ async def update_reservation(
     result = crud.update_reservation(
         db, reservation_update, reservation_id, requester_id
     )
-        
+
     if result == "FIXED RESERVATION ALREADY EXISTS":
         raise HTTPException(status_code=409, detail="Fixed Reservation Already Exists")
     if result == "PERMISSION DENIED":
@@ -1164,10 +1171,7 @@ async def update_reservation(
     )
 
     updated_reservation, changed_tables = result
-    just_fixed = (
-        previous_fixed_at is None 
-        and updated_reservation.fixed_at is not None
-    )
+    just_fixed = previous_fixed_at is None and updated_reservation.fixed_at is not None
 
     # 예약이 0개가 된 테이블
     for table in changed_tables:
@@ -1181,24 +1185,27 @@ async def update_reservation(
             },
         )
 
-    if just_fixed and reservation_user.role == 'customer':
-        db_company = crud.get_company(db, db_table.company_id)
-        background_tasks.add_task(
-            solapi_alimtalk.send_alimtalk,
-            reservation_user.phonenumber,
-            "[실제 템플릿 id]",
-            "[실제 pf id]",
-            {
-                "매장명": db_company.name,
-                "테이블이름:": db_table.tablename,
-            }
-        )
-        
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
     )
+
+    if just_fixed and reservation_user.role == "customer":
+        db_company = crud.get_company(db, db_table.company_id)
+        if reservation_user.phonenumber is None:
+            print("알림톡 번호 없음.")
+        else:
+            background_tasks.add_task(
+                solapi_alimtalk.send_alimtalk,
+                reservation_user.phonenumber,
+                "[실제 템플릿 id]",
+                "[실제 pf id]",
+                {
+                    "#{매장명}": db_company.name,
+                    "#{테이블이름}": db_table.tablename,
+                },
+            )
     return updated_reservation
 
 
@@ -1392,15 +1399,13 @@ async def reservation_check_in(
         },
     )
     background_tasks.add_task(
-            manager.broadcast,
-            db_reservation.table.company_id,
-            {
-                "type": "reservation_updated",
-                "payload": {
-                    "table_id": db_table.id
-                },
-            },
-        )
+        manager.broadcast,
+        db_reservation.table.company_id,
+        {
+            "type": "reservation_updated",
+            "payload": {"table_id": db_table.id},
+        },
+    )
     return result
 
 
