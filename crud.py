@@ -41,7 +41,7 @@ from schemas import (
     SetMenuUpdate,
     SetMenuItemCreate,
     JoinCompanyWithCode,
-    PurchaseBatchCreate
+    PurchaseBatchCreate,
 )
 from typing import Optional
 from datetime import datetime, UTC, date, time, timedelta
@@ -889,13 +889,16 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
             existing_purchase = (
                 db.query(TablePurchase)
                 .filter(
-                    TablePurchase.item_id == item.id, TablePurchase.table_id == db_table.id
+                    TablePurchase.item_id == item.id,
+                    TablePurchase.table_id == db_table.id,
                 )
                 .first()
             )
             if existing_purchase is not None:
                 existing_purchase.quantity += purchase.quantity
-                existing_purchase.total_price = existing_purchase.quantity * item.item_price
+                existing_purchase.total_price = (
+                    existing_purchase.quantity * item.item_price
+                )
             else:
                 db_purchase = TablePurchase(
                     table_id=purchases.table_id,
@@ -953,7 +956,9 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
                         item_name=db_item.item_name,
                         quantity=component.quantity * purchase.quantity,
                         unit_price=db_item.item_price,
-                        total_price=db_item.item_price * component.quantity * purchase.quantity,
+                        total_price=db_item.item_price
+                        * component.quantity
+                        * purchase.quantity,
                         created_at=datetime.now(UTC),
                     )
                     db.add(db_purchase)
@@ -973,33 +978,45 @@ def register_reservation(
     db: Session,
     reservation_input: ReservationCreate,
     table_id: str,
-    request_user_id: str,
+    user: User
 ):
-    db_user = get_user(db, request_user_id)
-    if db_user is None:
-        return "CURRENT USER NOT FOUND"
-
-    db_table = get_table(db, table_id)
+    db_table = (
+        db.query(TableMaster)
+        .filter(TableMaster.id == table_id)
+        .with_for_update()
+        .first()
+    ) # 잠금 필요
     if db_table is None:
         return "Table not found"
+
+    top_reservation = (
+        db.query(Reservation)
+        .filter(Reservation.table_id == db_table.id)
+        .order_by(
+            Reservation.bid_price.desc().nulls_last(), # 정렬방법.
+            Reservation.id.asc(), # 동점 시 먼저 한 놈: 현재 id가 int니까
+        )
+        .first()
+    )
+    
     is_company_staff = (
-        db_user.role in {"owner", "admin", "user"}
-        and db_user.company_id == db_table.company_id
+        user.role in {"owner", "admin", "user"}
+        and user.company_id == db_table.company_id
     )
 
-    if db_user.role == "customer":
-        if not db_user.phone_verified:
+    if user.role == "customer":
+        if not user.phone_verified:
             return "PHONE VERIFICATION NEEDED"
         count = (
             db.query(Reservation)
-            .filter(Reservation.created_by_id == db_user.id)
+            .filter(Reservation.created_by_id == user.id)
             .count()
         )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
     else:
         if not is_company_staff:
-            "PERMISSION DENIED"
+            return "PERMISSION DENIED"
 
     db_table.reserved_at = reservation_input.reservation_time
     db_reservation = Reservation(
@@ -1009,33 +1026,41 @@ def register_reservation(
         customer_phone=reservation_input.customer_phone,
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
         is_fixed=reservation_input.is_fixed,
-        created_by_id=request_user_id,
+        created_by_id=user.id,
     )
     db_table.has_reservations = True
     db.add(db_reservation)
     db.flush()
 
-    # 예약 하나에 여러 예약 내역이 가능하므로 id도 for문 안에서
-    for purchase in reservation_input.purchases:
-        db_item = get_item(purchase.item_id, db)
-        if db_item is None:
-            db.rollback()  # 앞에 해둔 게 있기 때문에 롤백
-            return "Item not found"
-        now = datetime.now(UTC)
-        db_res_purchase = ReservationPurchase(
-            reservation_id=db_reservation.id,
-            item_id=purchase.item_id,
-            item_name=db_item.item_name,
-            unit_price=db_item.item_price,
-            quantity=purchase.quantity,
-            total_price=db_item.item_price * purchase.quantity,
-            created_at=now,
-        )
-        db.add(db_res_purchase)
+    outbid_reservation = None # 구 1등
+
+    if (
+        top_reservation is not None
+        and (db_reservation.bid_price or 0) > (top_reservation.bid_price or 0) # or 0은 bid_price가 nullable이라 미연 방지
+    ): 
+        outbid_reservation = top_reservation        
 
     db.commit()
     db.refresh(db_reservation)
-    return db_reservation
+    return db_reservation, outbid_reservation
+
+    # 예약 하나에 여러 예약 내역이 가능하므로 id도 for문 안에서
+    # for purchase in reservation_input.purchases:
+    #     db_item = get_item(purchase.item_id, db)
+    #     if db_item is None:
+    #         db.rollback()  # 앞에 해둔 게 있기 때문에 롤백
+    #         return "Item not found"
+    #     now = datetime.now(UTC)
+    #     db_res_purchase = ReservationPurchase(
+    #         reservation_id=db_reservation.id,
+    #         item_id=purchase.item_id,
+    #         item_name=db_item.item_name,
+    #         unit_price=db_item.item_price,
+    #         quantity=purchase.quantity,
+    #         total_price=db_item.item_price * purchase.quantity,
+    #         created_at=now,
+    #     )
+    #     db.add(db_res_purchase)
 
 
 def get_reservation(
@@ -1045,7 +1070,7 @@ def get_reservation(
     return db.query(Reservation).filter(Reservation.id == reservation_id).first()
 
 
-def reservation_under(db: Session, user_id: str):    
+def reservation_under(db: Session, user_id: str):
     return (
         db.query(Reservation)
         .filter(
@@ -1121,7 +1146,7 @@ def update_reservation(
     if (
         reservation_update.is_fixed is not None
         and is_company_staff
-        and reservation_update.is_fixed != db_reservation.is_fixed # 등록 / 취소
+        and reservation_update.is_fixed != db_reservation.is_fixed  # 등록 / 취소
     ):
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed

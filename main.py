@@ -1005,9 +1005,10 @@ async def register_reservation(
     db: Session = Depends(get_db),
 ):
     current_user_id = firebase_claims["uid"]
-    result = crud.register_reservation(db, register, table_id, current_user_id)
-    if result == "CURRENT USER NOT FOUND":
-        raise HTTPException(status_code=403, detail="User not found")
+    db_user = crud.get_user(db, current_user_id)
+    if db_user is None:
+        return "CURRENT USER NOT FOUND"
+    result = crud.register_reservation(db, register, table_id, db_user)
     if result == "PHONE VERIFICATION NEEDED":
         raise HTTPException(status_code=403, detail="Phone verification needed")
     if result == "Table not found":
@@ -1020,6 +1021,10 @@ async def register_reservation(
         raise HTTPException(status_code=409, detail="Too many reservations")
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=409, detail="Permission Denied")
+
+    reservation, outbid_reservation = result
+    # 나중에 api재조회가 아니라 예약 객체를 보내는 완전 웹소켓으로 가면 reservation이용할 것.
+
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
@@ -1039,7 +1044,20 @@ async def register_reservation(
         db_table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
     )
-    return result
+
+    if outbid_reservation is not None:
+        db_company = crud.get_company(db, db_table.company_id)
+        background_tasks.add_task(
+            solapi_alimtalk.send_alimtalk,
+            db_user.phonenumber,
+            "KA01TP2609180032320828qG1M1RwxX4",
+            "KA01PF260917045443138PqRAzw6E07o",
+            {
+                "#{매장명}": db_company.name,
+                "#{테이블이름}": db_table.tablename
+            }
+        )
+    return reservation
 
 
 @app.get("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
