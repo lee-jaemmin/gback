@@ -1264,18 +1264,18 @@ async def no_show(
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
-    db_company = crud.get_company(db, company_id)
-    background_tasks.add_task(
-            solapi_alimtalk.send_alimtalk,
-            noshow_user.phonenumber,
-            "KA01TP26091800592800836Ki9hg280T",
-            "KA01PF260917045443138PqRAzw6E07o",
-            {
-                "#{매장명}": db_company,
-                "#{테이블이름}": table.tablename
-            }
-    )
-
+    if noshow_user.role == "customer":
+        db_company = crud.get_company(db, company_id)
+        background_tasks.add_task(
+                solapi_alimtalk.send_alimtalk,
+                noshow_user.phonenumber,
+                "KA01TP26091800592800836Ki9hg280T",
+                "KA01PF260917045443138PqRAzw6E07o",
+                {
+                    "#{매장명}": db_company,
+                    "#{테이블이름}": table.tablename
+                }
+        )
     return {"message": "no show progress success"}
 
 
@@ -1290,6 +1290,7 @@ async def delete_reservation(
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    reservation_user
 
     company_id = db_reservation.table.company_id
 
@@ -1322,6 +1323,10 @@ async def delete_reservation(
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
+    background_tasks.add_task(
+            solapi_alimtalk.send_alimtalk,
+            
+        )
 
     return {"message": "Reservation deleted successfully"}
 
