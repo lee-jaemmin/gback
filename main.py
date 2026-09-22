@@ -1334,7 +1334,7 @@ async def delete_reservation(
             reservation_user.phonenumber,
             "KA01TP260918004436412nfNNHItqaZm",
             "KA01PF260917045443138PqRAzw6E07o",
-            {"#{매장명}": db_company.name, "#{테이블이름}": table.tablename},
+            {"#{매장명}": db_company.name, "#{테이블번호}": table.tablename},
         )
 
     return {"message": "Reservation deleted successfully"}
