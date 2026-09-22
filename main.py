@@ -1049,7 +1049,7 @@ async def register_reservation(
         db_company = crud.get_company(db, db_table.company_id)
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,
-            db_user.phonenumber,
+            outbid_reservation.customer_phone,
             "KA01TP2609180032320828qG1M1RwxX4",
             "KA01PF260917045443138PqRAzw6E07o",
             {"#{매장명}": db_company.name, "#{테이블이름}": db_table.tablename},
