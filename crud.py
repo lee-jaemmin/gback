@@ -1427,8 +1427,9 @@ def reservation_check_in(db: Session, reservation_id: int):
     db.delete(db_reservation)
     db.flush()
     reservationEmpty = False
-    db_reservations = get_reservations_by_table(db, db_table.id)
-    if not db_reservations:
+    reservations_left = get_reservations_by_table(db, db_table.id)
+    
+    if not reservations_left:
         reservationEmpty = True
     # TableMaster 변경: 1회
     db_table.customer = db_reservation.customer_name
@@ -1443,8 +1444,8 @@ def reservation_check_in(db: Session, reservation_id: int):
     ]
     db_table.registered_at = datetime.now(UTC)
     db_table.reserved_at = (
-        min(reservation.reservation_time for reservation in db_reservations)
-        if db_reservations
+        min(reservation.reservation_time for reservation in reservations_left)
+        if reservations_left
         else None
     )
     recalculate_table_total_price(db, table_id)
