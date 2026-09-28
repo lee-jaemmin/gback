@@ -92,10 +92,10 @@ class TableMaster(Base):
     section = Column(String, nullable=False)
     status = Column(String, default="available", nullable=False)
 
-    customer = Column(String, default="", nullable=False)
-    phonenumber = Column(String, default="", nullable=False)
-    persons = Column(Integer, default=0, nullable=False)
-    remark = Column(Text, default="", nullable=False)
+    customer = Column(String, default="", nullable=True)
+    phonenumber = Column(String, default="", nullable=True)
+    persons = Column(Integer, default=0, nullable=True)
+    remark = Column(Text, default="", nullable=True)
 
     total_price = Column(Integer, default=0, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
