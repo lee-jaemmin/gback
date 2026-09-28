@@ -1280,9 +1280,9 @@ def delete_reservation(
     db.delete(db_reservation)
     db.flush()
     db_left_reservations = get_reservations_by_table(db, db_table.id)
+    db_table.is_reserved = any(r.is_fixed for r in db_left_reservations)
     if not db_left_reservations:
         db_table.has_reservations = False
-        db_table.is_reserved = False
         db_table.reserved_at = None
     db.commit()
     return db_table  # 최신화된 테이블 정보 보냄. 그래야 웹소켓에 씀
