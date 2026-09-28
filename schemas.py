@@ -461,6 +461,7 @@ class ReservationResponse(ReservationBase):
     updated_at: datetime
     fixed_at: Optional[datetime]
     arrival_at: Optional[datetime]
+    fixed_by: Optional[str]
 
     class Config:
         from_attributes = True

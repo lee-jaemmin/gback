@@ -1169,6 +1169,7 @@ def update_reservation(
         db_table.is_reserved = reservation_update.is_fixed
         if reservation_update.is_fixed:
             db_reservation.fixed_at = datetime.now(UTC)
+            db_reservation.fixed_by = db_user.id
             just_fixed = True
         else:
             db_reservation.fixed_at = None

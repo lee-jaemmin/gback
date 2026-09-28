@@ -75,6 +75,26 @@ def send_table_out_pushes(
     clear_invalid_fcm_tokens(invalid_user_ids)
 
 
+def send_reservation_cancelled_push(
+    token: str, user_id: str, company_id: str, table_id: str, tablename: str
+):
+    try:
+        send_push_to_token(
+            token=token,
+            title="확정 예약 취소",
+            body=f"{tablename} 테이블의 확정 예약이 취소되었습니다.",
+            data={
+                "type": "reservation_cancelled",
+                "table_id": table_id,
+                "company_id": company_id,
+            },
+        )
+    except Exception as e:
+        print(f"예약 취소 푸시 발송 실패 user_id: {user_id}: {e}")
+        if is_invalid_fcm_token_error(e):
+            clear_invalid_fcm_tokens([user_id])
+
+
 def start_scheduler():
     if scheduler.running:
         return
@@ -1327,7 +1347,19 @@ async def delete_reservation(
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
-    if reservation_user.role == "customer":
+    if db_reservation.is_fixed and db_reservation.fixed_by:
+        staff = crud.get_user(db, db_reservation.fixed_by)
+        if staff and staff.fcmtoken and staff.is_push_on is not False:
+            background_tasks.add_task(
+                send_reservation_cancelled_push,
+                staff.fcmtoken,
+                staff.id,
+                company_id,
+                table.id,
+                table.tablename,
+            )
+
+    if reservation_user.role == "customer" and reservation_user.phonenumber:
         db_company = crud.get_company(db, company_id)
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,

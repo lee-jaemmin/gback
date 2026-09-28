@@ -299,6 +299,7 @@ class Reservation(Base):
     is_fixed = Column(Boolean, nullable=False, default=False)
     fixed_at = Column(DateTime(timezone=True), nullable=True)
     arrival_at = Column(DateTime(timezone=True), nullable=True)
+    fixed_by = Column(String, nullable=True)
 
     table = relationship("TableMaster", back_populates="reservations")
 
