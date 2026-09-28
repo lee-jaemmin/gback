@@ -181,21 +181,74 @@ def get_companies(db: Session):  # 전체 회사 반환
 
 def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     db_company = get_company(db, company_id)
-
     if db_company is None:  # 해당 객체 없으면
         return None
-
+    
+    previous_sections = db_company.sections
+    future_sections = company_update.sections
+    
     if company_update.name is not None:
         db_company.name = company_update.name
 
     if company_update.sections is not None:
-        db_company.sections = company_update.sections
+        changed_section = [
+            (previous, future)
+            for previous, future in zip(previous_sections, future_sections)
+            if previous != future
+        ]
+        db_tables = db.query(TableMaster).filter(
+            TableMaster.company_id == company_id,
+            TableMaster.section == changed_section[0][0]
+        ).all()
+
+        for table in db_tables:
+            table.section = changed_section[0][1]
 
     db.commit()
     db.refresh(db_company)
 
     return db_company
 
+def add_section(db: Session, company_id: str, added_section: str):
+    db_company = get_company(db, company_id)
+    if db_company is None:
+        return "Company not Exists"
+    if added_section in db_company.sections:
+        return "Section Already Exists"
+    db_company.sections = [*db_company.sections, added_section]
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+
+def delete_section(db: Session, company_id: str, removed_section: str):
+    db_company = get_company(db, company_id)
+    if db_company is None:
+        return "Company not Exists"
+    if removed_section not in db_company.sections:
+        return "Section not Exists"
+
+    db_tables = (
+        db.query(TableMaster)
+        .filter(
+            TableMaster.company_id == company_id,
+            TableMaster.section == removed_section,
+        )
+        .all()
+    )
+    for table in db_tables:
+        db.query(BidList).filter(BidList.table_id == table.id).delete(
+            synchronize_session=False
+        )
+        db.query(TablePurchaseLog).filter(
+            TablePurchaseLog.table_id == table.id
+        ).delete(synchronize_session=False)
+        db.delete(table)
+
+    db_company.sections = [section for section in db_company.sections if section != removed_section]
+    db.commit()
+    db.refresh(db_company)
+    return db_company
+    
 
 def get_company_by_invite_code(db: Session, invite_code: str):
     return db.query(Company).filter(Company.invite_code == invite_code).first()
@@ -236,6 +289,8 @@ def join_company_with_code(db: Session, request: JoinCompanyWithCode, user: User
     db.commit()
     db.refresh(user)
     return user
+
+
 
 
 # ========================

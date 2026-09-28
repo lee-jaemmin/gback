@@ -243,8 +243,17 @@ def read_companies(db: Session = Depends(get_db)):
 def update_company(
     company_id: str,
     company_update: schemas.CompanyUpdate,  # FASTAPI에서는 이 줄이 검증, 변환까지 해줌.
+    firebase_claim: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
+    user = crud.get_user(db, firebase_claim["uid"])
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found") 
+    is_staff = (
+        user.company_id == company_id
+    )
+    if not is_staff:
+        raise HTTPException(status_code=403, detail="Permission Denied")
     db_company = crud.update_company(db, company_id, company_update)
 
     if db_company is None:
@@ -427,6 +436,46 @@ def join_company_with_code(
     result = crud.join_company_with_code(db, request, db_user)
     if result is None:
         raise HTTPException(status_code=404, detail="Company not found")
+    return result
+
+@app.post("/companies/{company_id}/add-section/{added_section}", response_model=schemas.CompanyResponse)
+def add_section(company_id: str, added_section: str, db: Session = Depends(get_db), firebase_claim: dict = Depends(get_verified_firebase_claims)):
+    user = crud.get_user(db, firebase_claim["uid"])
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found") 
+    is_owner = (
+        user.company_id == company_id
+        and user.role in {"owner", "admin"}
+    )
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    result = crud.add_section(db, company_id, added_section)
+    if result == "Company not Exists":
+        raise HTTPException(status_code=404, detail="Company not found")
+    if result == "Section Already Exists":
+        raise HTTPException(status_code=409, detail="Section Already Exists")
+
+    return result
+
+@app.post("/companies/{company_id}/remove-section/{removed_section}", response_model=schemas.CompanyResponse)
+def delete_section(company_id: str, removed_section: str, db: Session = Depends(get_db), firebase_claim: dict = Depends(get_verified_firebase_claims)):
+    user = crud.get_user(db, firebase_claim["uid"])
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found") 
+    is_owner = (
+        user.company_id == company_id
+        and user.role in {"owner", "admin"}
+    )
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
+    result = crud.delete_section(db, company_id, removed_section)
+    
+    if result == "Company not Exists":
+        raise HTTPException(status_code=404, detail="Company not found")
+    if result == "Section not Exists":
+            raise HTTPException(status_code=404, detail="Section not Exists")
+
     return result
 
 
