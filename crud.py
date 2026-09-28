@@ -186,7 +186,7 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     
     previous_sections = db_company.sections
     future_sections = company_update.sections
-    
+
     if company_update.name is not None:
         db_company.name = company_update.name
 
@@ -201,8 +201,13 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
             TableMaster.section == changed_section[0][0]
         ).all()
 
+        index = 1
         for table in db_tables:
             table.section = changed_section[0][1]
+            table.tablename = f"{changed_section[0][1]} - {index}"
+            index += 1
+
+        db_company.sections = future_sections
 
     db.commit()
     db.refresh(db_company)
