@@ -1372,9 +1372,9 @@ async def delete_reservation(
 ):
     current_user_id = firebase_claims["uid"]
     db_reservation = crud.get_reservation(db, reservation_id)
-    was_fixed = db_reservation.is_fixed
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    was_fixed = db_reservation.is_fixed
     reservation_user = crud.get_user(db, db_reservation.created_by_id)
     if reservation_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1423,16 +1423,6 @@ async def delete_reservation(
             company_id,
             table.id,
             table.tablename,
-        )
-
-    if reservation_user.role == "customer" and reservation_user.phonenumber:
-        db_company = crud.get_company(db, company_id)
-        background_tasks.add_task(
-            solapi_alimtalk.send_alimtalk,
-            reservation_user.phonenumber,
-            "KA01TP260918004436412nfNNHItqaZm",
-            "KA01PF260917045443138PqRAzw6E07o",
-            {"#{매장명}": db_company.name, "#{테이블번호}": table.tablename},
         )
 
     return {"message": "Reservation deleted successfully"}
