@@ -239,10 +239,10 @@ def read_companies(db: Session = Depends(get_db)):
     return crud.get_companies(db)
 
 
-@app.patch("/companies/{company_id}", response_model=schemas.CompanyResponse)
-def update_company(
+@app.patch("/companies/{company_id}/modify-section", response_model=schemas.CompanyResponse)
+def modify_section(
     company_id: str,
-    company_update: schemas.CompanyUpdate,  # FASTAPI에서는 이 줄이 검증, 변환까지 해줌.
+    section_change: schemas.ChangeSection,  # FASTAPI에서는 이 줄이 검증, 변환까지 해줌.
     firebase_claim: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
@@ -254,7 +254,7 @@ def update_company(
     )
     if not is_staff:
         raise HTTPException(status_code=403, detail="Permission Denied")
-    db_company = crud.update_company(db, company_id, company_update)
+    db_company = crud.modify_section(db, company_id, section_change)
 
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")

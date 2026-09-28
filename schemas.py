@@ -50,6 +50,10 @@ class SetBidEndAtAll(BaseModel):
     company_id: str
     bid_end_at: datetime
 
+class ChangeSection(BaseModel):
+    old_name: str
+    new_name: str
+
 # =========================
 # USER
 # =========================

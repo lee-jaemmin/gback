@@ -41,6 +41,7 @@ from schemas import (
     SetMenuUpdate,
     SetMenuItemCreate,
     JoinCompanyWithCode,
+    ChangeSection,
     PurchaseBatchCreate,
 )
 from typing import Optional
@@ -179,41 +180,35 @@ def get_companies(db: Session):  # 전체 회사 반환
     return db.query(Company).all()
 
 
-def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
+def modify_section(db: Session, company_id: str, section_change: ChangeSection):
     db_company = get_company(db, company_id)
-    if db_company is None:  # 해당 객체 없으면
-        return None
+    if db_company is None:
+        return "Company not Exists"
+    if section_change.old_name not in db_company.sections:
+        return "Section not Exists"
+    if section_change.new_name in db_company.sections:
+            return "Section Already Exists"
+    db_company.sections = [
+        section_change.new_name
+        if section == section_change.old_name
+        else section
+        for section in db_company.sections
+    ]
+
+    db_tables = db.query(TableMaster).filter(
+        TableMaster.company_id == company_id,
+        TableMaster.section == section_change.old_name
+    )
+    index =1
+    for table in db_tables:
+        table.section = section_change.new_name
+        table.tablename = f"{section_change.new_name}-{index}"
+        index += 1
     
-    previous_sections = db_company.sections
-    future_sections = company_update.sections
-
-    if company_update.name is not None:
-        db_company.name = company_update.name
-
-    if company_update.sections is not None:
-        changed_section = [
-            (previous, future)
-            for previous, future in zip(previous_sections, future_sections)
-            if previous != future
-        ]
-        db_tables = db.query(TableMaster).filter(
-            TableMaster.company_id == company_id,
-            TableMaster.section == changed_section[0][0]
-        ).all()
-
-        index = 1
-        for table in db_tables:
-            table.section = changed_section[0][1]
-            table.tablename = f"{changed_section[0][1]}-{index}"
-            index += 1
-
-        db_company.sections = future_sections
-
     db.commit()
     db.refresh(db_company)
-
     return db_company
-
+    
 def add_section(db: Session, company_id: str, added_section: str):
     db_company = get_company(db, company_id)
     if db_company is None:
