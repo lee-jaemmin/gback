@@ -221,6 +221,22 @@ def add_section(db: Session, company_id: str, added_section: str):
     if added_section in db_company.sections:
         return "Section Already Exists"
     db_company.sections = [*db_company.sections, added_section]
+    index = 1
+    for i in range(10):
+        db_table = TableMaster(
+            id=str(uuid.uuid4()),
+            tablename=f"{added_section}-{index}",
+            section=added_section,
+            status="available",
+            customer=None,
+            phonenumber=None,
+            persons=0,
+            remark="",
+            total_price=0,
+            company_id=db_company.id,
+        )   
+        db.add(db_table)
+        index += 1
     db.commit()
     db.refresh(db_company)
     return db_company
