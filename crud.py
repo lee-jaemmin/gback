@@ -204,7 +204,7 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
         index = 1
         for table in db_tables:
             table.section = changed_section[0][1]
-            table.tablename = f"{changed_section[0][1]} - {index}"
+            table.tablename = f"{changed_section[0][1]}-{index}"
             index += 1
 
         db_company.sections = future_sections
