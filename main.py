@@ -116,23 +116,41 @@ def send_table_in_pushes(
 
 
 def send_reservation_cancelled_push(
-    token: str, user_id: str, company_id: str, table_id: str, tablename: str
+    company_id: str, table_id: str, tablename: str
 ):
+    db = SessionLocal()
     try:
-        send_push_to_token(
-            token=token,
-            title="확정 예약 취소",
-            body=f"{tablename} 테이블의 확정 예약이 취소되었습니다.",
-            data={
-                "type": "reservation_cancelled",
-                "table_id": table_id,
-                "company_id": company_id,
-            },
-        )
-    except Exception as e:
-        print(f"예약 취소 푸시 발송 실패 user_id: {user_id}: {e}")
-        if is_invalid_fcm_token_error(e):
-            clear_invalid_fcm_tokens([user_id])
+        users = crud.get_users_by_company(db, company_id)
+        push_targets = {}
+        for user in users:
+            if (
+                user.role in {"owner", "admin", "user"}
+                and user.fcmtoken
+                and user.is_push_on is not False
+            ):
+                push_targets.setdefault(user.fcmtoken, []).append(user.id)
+    finally:
+        db.close()
+
+    invalid_user_ids = []
+    for token, user_ids in push_targets.items():
+        try:
+            send_push_to_token(
+                token=token,
+                title="확정 예약 취소",
+                body=f"{tablename} 테이블의 확정 예약이 취소되었습니다.",
+                data={
+                    "type": "reservation_cancelled",
+                    "table_id": table_id,
+                    "company_id": company_id,
+                },
+            )
+        except Exception as e:
+            print(f"예약 취소 푸시 발송 실패 user_ids: {user_ids}: {e}")
+            if is_invalid_fcm_token_error(e):
+                invalid_user_ids.extend(user_ids)
+
+    clear_invalid_fcm_tokens(invalid_user_ids)
 
 
 def start_scheduler():
@@ -1354,6 +1372,7 @@ async def delete_reservation(
 ):
     current_user_id = firebase_claims["uid"]
     db_reservation = crud.get_reservation(db, reservation_id)
+    was_fixed = db_reservation.is_fixed
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
     reservation_user = crud.get_user(db, db_reservation.created_by_id)
@@ -1390,17 +1409,21 @@ async def delete_reservation(
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
-    if db_reservation.is_fixed and db_reservation.fixed_by:
-        staff = crud.get_user(db, db_reservation.fixed_by)
-        if staff and staff.fcmtoken and staff.is_push_on is not False:
-            background_tasks.add_task(
-                send_reservation_cancelled_push,
-                staff.fcmtoken,
-                staff.id,
-                company_id,
-                table.id,
-                table.tablename,
-            )
+    if was_fixed:
+        db_notification = models.Notification(
+            company_id=company_id,
+            title="확정 예약 취소",
+            body=f"{table.tablename} 테이블의 확정 예약이 취소되었습니다.",
+            type="reservation_cancelled",
+        )
+        db.add(db_notification)
+        db.commit()
+        background_tasks.add_task(
+            send_reservation_cancelled_push,
+            company_id,
+            table.id,
+            table.tablename,
+        )
 
     if reservation_user.role == "customer" and reservation_user.phonenumber:
         db_company = crud.get_company(db, company_id)
