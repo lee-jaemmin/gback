@@ -74,6 +74,46 @@ def send_table_out_pushes(
 
     clear_invalid_fcm_tokens(invalid_user_ids)
 
+def send_table_in_pushes(
+    company_id: str,
+    table_id: str,
+    tablename: str,
+):
+    db = SessionLocal()
+
+    try:
+        users = crud.get_users_by_company(db, company_id)
+        push_targets = [
+            {"user_id": user.id, "fcmtoken": user.fcmtoken}
+            for user in users
+            if user.fcmtoken and user.is_push_on is not False
+        ]
+    finally:
+        db.close()
+
+    invalid_user_ids = []
+
+    for target in push_targets:
+        try:
+            send_push_to_token(
+                token=target["fcmtoken"],
+                title="테이블 입장 알림",
+                body=f"{tablename} 테이블에 입장하였습니다.",
+                data={
+                    "type": "table_in",
+                    "table_id": table_id,
+                    "company_id": company_id,
+                    "tablename": tablename,
+                },
+            )
+        except Exception as e:
+            print(f"푸시 발송 실패 user_id: {target['user_id']}: {e}")
+
+            if is_invalid_fcm_token_error(e):
+                invalid_user_ids.append(target["user_id"])
+
+    clear_invalid_fcm_tokens(invalid_user_ids)
+
 
 def send_reservation_cancelled_push(
     token: str, user_id: str, company_id: str, table_id: str, tablename: str
@@ -596,6 +636,7 @@ async def update_table(
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    previous_status = db_table.status
     is_company_staff = db_user.company_id == db_table.company_id and db_user.role in {
         "owner",
         "admin",
@@ -618,6 +659,8 @@ async def update_table(
             # 그다음에 json
         },
     )
+    if previous_status == "available" and table.status == "inuse":
+         background_tasks.add_task(send_table_in_pushes, company_id, table_id, table.tablename)
     return table
 
 
