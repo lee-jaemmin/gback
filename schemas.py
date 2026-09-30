@@ -25,6 +25,7 @@ class CompanyUpdate(BaseModel):
 
 class CompanyResponse(CompanyBase):
     id: str
+    name: str
     created_at: datetime
     sections: list[str]
     updated_at: datetime
