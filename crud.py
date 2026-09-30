@@ -179,6 +179,14 @@ def get_company(db: Session, company_id: str):
 def get_companies(db: Session):  # 전체 회사 반환
     return db.query(Company).all()
 
+def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
+    db_company = get_company(db, company_id)
+    if db_company is None:
+        return None
+    db_company.insta = company_update.insta
+    db.commit()
+    db.refresh(db_company)
+    return db_company
 
 def modify_section(db: Session, company_id: str, section_change: ChangeSection):
     db_company = get_company(db, company_id)

@@ -50,6 +50,7 @@ class Company(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
     )
     floor_image_path = Column(String, nullable=True)
+    insta = Column(String, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
     tables = relationship("TableMaster", back_populates="company", cascade="all, delete-orphan")

@@ -74,6 +74,7 @@ def send_table_out_pushes(
 
     clear_invalid_fcm_tokens(invalid_user_ids)
 
+
 def send_table_in_pushes(
     company_id: str,
     table_id: str,
@@ -115,9 +116,7 @@ def send_table_in_pushes(
     clear_invalid_fcm_tokens(invalid_user_ids)
 
 
-def send_reservation_cancelled_push(
-    company_id: str, table_id: str, tablename: str
-):
+def send_reservation_cancelled_push(company_id: str, table_id: str, tablename: str):
     db = SessionLocal()
     try:
         users = crud.get_users_by_company(db, company_id)
@@ -195,7 +194,7 @@ cors_allowed_origins = [
         "CORS_ALLOWED_ORIGINS",
         "https://tablebid.kr,https://tablebid-chi.vercel.app",
     ).split(",")
-        if origin.strip()
+    if origin.strip()
 ]
 
 app.add_middleware(
@@ -226,7 +225,6 @@ def create_company(
 
 @app.get("/companies/{company_id}", response_model=schemas.CompanyResponse)
 def read_company(company_id: str, db: Session = Depends(get_db)):
-
     db_company = crud.get_company(db, company_id)
 
     if db_company is None:
@@ -239,7 +237,9 @@ def read_companies(db: Session = Depends(get_db)):
     return crud.get_companies(db)
 
 
-@app.patch("/companies/{company_id}/modify-section", response_model=schemas.CompanyResponse)
+@app.patch(
+    "/companies/{company_id}/modify-section", response_model=schemas.CompanyResponse
+)
 def modify_section(
     company_id: str,
     section_change: schemas.ChangeSection,  # FASTAPI에서는 이 줄이 검증, 변환까지 해줌.
@@ -248,10 +248,8 @@ def modify_section(
 ):
     user = crud.get_user(db, firebase_claim["uid"])
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found") 
-    is_staff = (
-        user.company_id == company_id
-    )
+        raise HTTPException(status_code=404, detail="User not found")
+    is_staff = user.company_id == company_id
     if not is_staff:
         raise HTTPException(status_code=403, detail="Permission Denied")
     db_company = crud.modify_section(db, company_id, section_change)
@@ -369,8 +367,14 @@ def get_company_floor_image_url(
     user_id = firebase_claims.get("uid")
     db_user = crud.get_user(db, user_id) if user_id else None
     if db_user is None:
-        raise HTTPException(status_code=403, detail="User not found")
-
+        raise HTTPException(status_code=404, detail="User not found")
+    if db_user.role == "customer":
+        pass
+    elif db_user.role in {"owner", "admin", "user"}:
+        if db_user.company_id != company_id:
+            raise HTTPException(status_code=403, detail="Company Access Denied")
+    else:
+        raise HTTPException(status_code=403, detail="Permission Denied")
     db_company = crud.get_company(db, company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -421,6 +425,33 @@ def regenerate_invite_code(company_id: str, db: Session = Depends(get_db)):
     return result
 
 
+@app.patch(
+    "/companies/{company_id}/upload-insta",
+    response_model=schemas.CompanyResponse,
+)
+def upload_insta_url(
+    company_id: str,
+    company_update: schemas.CompanyUpdate,
+    db: Session = Depends(get_db),
+    firebase_claim: dict = Depends(get_verified_firebase_claims),
+):
+    user_id = firebase_claim["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    is_staff = (
+        db_user.company_id == company_id
+        and db_user.role in {"owner", "admin", "user"}
+    )
+    if not is_staff:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    result = crud.update_company(db, company_id, company_update)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    return result
+
+
 @app.post("/join-with-code", response_model=schemas.UserResponse)
 def join_company_with_code(
     request: schemas.JoinCompanyWithCode,
@@ -438,15 +469,21 @@ def join_company_with_code(
         raise HTTPException(status_code=404, detail="Company not found")
     return result
 
-@app.post("/companies/{company_id}/add-section/{added_section}", response_model=schemas.CompanyResponse)
-def add_section(company_id: str, added_section: str, db: Session = Depends(get_db), firebase_claim: dict = Depends(get_verified_firebase_claims)):
+
+@app.post(
+    "/companies/{company_id}/add-section/{added_section}",
+    response_model=schemas.CompanyResponse,
+)
+def add_section(
+    company_id: str,
+    added_section: str,
+    db: Session = Depends(get_db),
+    firebase_claim: dict = Depends(get_verified_firebase_claims),
+):
     user = crud.get_user(db, firebase_claim["uid"])
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found") 
-    is_owner = (
-        user.company_id == company_id
-        and user.role in {"owner", "admin"}
-    )
+        raise HTTPException(status_code=404, detail="User not found")
+    is_owner = user.company_id == company_id and user.role in {"owner", "admin"}
     if not is_owner:
         raise HTTPException(status_code=403, detail="Permission Denied")
     result = crud.add_section(db, company_id, added_section)
@@ -457,24 +494,30 @@ def add_section(company_id: str, added_section: str, db: Session = Depends(get_d
 
     return result
 
-@app.post("/companies/{company_id}/remove-section/{removed_section}", response_model=schemas.CompanyResponse)
-def delete_section(company_id: str, removed_section: str, db: Session = Depends(get_db), firebase_claim: dict = Depends(get_verified_firebase_claims)):
+
+@app.post(
+    "/companies/{company_id}/remove-section/{removed_section}",
+    response_model=schemas.CompanyResponse,
+)
+def delete_section(
+    company_id: str,
+    removed_section: str,
+    db: Session = Depends(get_db),
+    firebase_claim: dict = Depends(get_verified_firebase_claims),
+):
     user = crud.get_user(db, firebase_claim["uid"])
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found") 
-    is_owner = (
-        user.company_id == company_id
-        and user.role in {"owner", "admin"}
-    )
+        raise HTTPException(status_code=404, detail="User not found")
+    is_owner = user.company_id == company_id and user.role in {"owner", "admin"}
     if not is_owner:
         raise HTTPException(status_code=403, detail="Permission Denied")
 
     result = crud.delete_section(db, company_id, removed_section)
-    
+
     if result == "Company not Exists":
         raise HTTPException(status_code=404, detail="Company not found")
     if result == "Section not Exists":
-            raise HTTPException(status_code=404, detail="Section not Exists")
+        raise HTTPException(status_code=404, detail="Section not Exists")
 
     return result
 
@@ -727,7 +770,9 @@ async def update_table(
         },
     )
     if previous_status == "available" and table.status == "inuse":
-         background_tasks.add_task(send_table_in_pushes, company_id, table_id, table.tablename)
+        background_tasks.add_task(
+            send_table_in_pushes, company_id, table_id, table.tablename
+        )
     return table
 
 
