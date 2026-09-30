@@ -30,6 +30,8 @@ class CompanyResponse(CompanyBase):
     updated_at: datetime
     invite_code: Optional[str] = None
     insta: Optional[str] = None
+    region: Optional[str] = ""
+    floor_image_path: Optional[str] = ""
 
     class Config:
         from_attributes = True
