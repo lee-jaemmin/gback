@@ -1093,6 +1093,12 @@ def register_reservation(
         )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
+        existed_reservation = (
+            db.query(Reservation)
+            .filter(Reservation.created_by_id == user.id, Reservation.table_id == db_table.id).first()
+        )
+        if existed_reservation is not None:
+            return "RESERVATION ALREADY EXISTS"
     else:
         if not is_company_staff:
             return "PERMISSION DENIED"
@@ -1183,7 +1189,8 @@ def update_reservation(
         .with_for_update()
         .first()
     )
-    db.refresh(db_reservation)
+    db.refresh(db_reservation) 
+    # 잠금 이후 다시 읽는 이유: 다른 요청이 같은 예약을 변경했을 수도 있기 때문!
     just_fixed = False
     outbid_reservation = None
 

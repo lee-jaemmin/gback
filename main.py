@@ -1196,6 +1196,8 @@ async def register_reservation(
         raise HTTPException(status_code=409, detail="Too many reservations")
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=409, detail="Permission Denied")
+    if result == "RESERVATION ALREADY EXISTS":
+            raise HTTPException(status_code=409, detail="Reservation already exists")
 
     reservation, outbid_reservation = result
     # 나중에 api재조회가 아니라 예약 객체를 보내는 완전 웹소켓으로 가면 reservation이용할 것.
