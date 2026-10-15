@@ -456,6 +456,7 @@ class ReservationUpdate(BaseModel):
     bid_price: Optional[int] = None
     is_fixed: Optional[bool] = None
     fixed_at: Optional[datetime] = None
+    table_id: Optional[str] = None
     arrival_at: Optional[datetime] = None
 
 class ReservationResponse(ReservationBase):

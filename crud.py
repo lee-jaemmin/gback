@@ -1221,6 +1221,8 @@ def update_reservation(
             db.rollback()
             return "FIXED RESERVATION ALREADY EXISTS"
     changed_tables = []
+    if reservation_update.table_id is not None:
+        db_reservation.table_id = reservation_update.table_id
     if reservation_update.reservation_time is not None:
         db_reservation.reservation_time = reservation_update.reservation_time
         # db_table.reserved_at = reservation_update.reservation_time
