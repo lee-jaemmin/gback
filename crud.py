@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from models import (
     Company,
     User,
@@ -333,6 +334,54 @@ def create_user(db: Session, user: UserCreate):
     db.commit()
     db.refresh(db_user)
 
+    return db_user
+
+
+class UserEmailConflictError(Exception):
+    pass
+
+
+def ensure_user_profile(
+    db: Session,
+    user_id: str,
+    username: str,
+    email: str,
+    tablecardfields: list[str],
+    fcmtoken: str | None,
+):
+    db_user = get_user(db, user_id)
+    if db_user is not None:
+        return db_user
+
+    if db.query(User).filter(User.email == email).first() is not None:
+        raise UserEmailConflictError
+
+    db_user = User(
+        id=user_id,
+        username=username,
+        email=email,
+        fcmtoken=fcmtoken,
+        tablecardfields=tablecardfields,
+    )
+    db.add(db_user)
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+
+        existing_user = get_user(db, user_id)
+        if existing_user is not None:
+            return existing_user
+
+        if db.query(User).filter(User.email == email).first() is not None:
+            raise UserEmailConflictError from exc
+        raise
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(db_user)
     return db_user
 
 

@@ -525,6 +525,31 @@ def delete_section(
 # =====================
 # USER API
 # =====================
+@app.put("/users/me", response_model=schemas.UserResponse)
+def ensure_current_user(
+    user: schemas.UserBase,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    email = firebase_claims.get("email") or user.email
+
+    try:
+        return crud.ensure_user_profile(
+            db,
+            user_id,
+            user.username,
+            email,
+            user.tablecardfields,
+            user.fcmtoken,
+        )
+    except crud.UserEmailConflictError:
+        raise HTTPException(
+            status_code=409,
+            detail="Email is already linked to another user",
+        )
+
+
 @app.post("/users", response_model=schemas.UserResponse)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user(db, user.id)
