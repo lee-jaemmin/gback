@@ -1988,7 +1988,7 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_to.persons = db_from.persons
     db_to.phonenumber = db_from.phonenumber
     db_to.purchase_summary = db_from.purchase_summary
-    db_to.remark = db_from.remark
+    db_to.remark = f"{db_from.remark}\n{db_from.tablename}에서 이동"
     db_to.status = db_from.status
     db_to.registered_at = db_from.registered_at
     db_to.total_price = db_from.total_price
