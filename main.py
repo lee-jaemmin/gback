@@ -439,10 +439,11 @@ def upload_insta_url(
     db_user = crud.get_user(db, user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    is_staff = (
-        db_user.company_id == company_id
-        and db_user.role in {"owner", "admin", "user"}
-    )
+    is_staff = db_user.company_id == company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
     if not is_staff:
         raise HTTPException(status_code=403, detail="Permission Denied")
     result = crud.update_company(db, company_id, company_update)
@@ -1220,7 +1221,7 @@ async def register_reservation(
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=409, detail="Permission Denied")
     if result == "RESERVATION ALREADY EXISTS":
-            raise HTTPException(status_code=409, detail="Reservation already exists")
+        raise HTTPException(status_code=409, detail="Reservation already exists")
 
     reservation, outbid_reservation = result
     # 나중에 api재조회가 아니라 예약 객체를 보내는 완전 웹소켓으로 가면 reservation이용할 것.
@@ -1709,18 +1710,34 @@ def read_history(history_id: int, db: Session = Depends(get_db)):
 )
 def read_histories_by_table(
     table_id: str,
-    business_date: Optional[date] = None,
+    start_time: datetime,
+    end_time: datetime,
     db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
 ):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
-    target_business_date = business_date or crud.get_business_date()
+    is_company_staff = db_user.company_id == db_table.company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
+
+    if not is_company_staff:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    
     return crud.get_histories_by_table_and_business_date(
         db,
         table_id,
-        target_business_date,
+        start_time,
+        end_time
     )
 
 

@@ -1725,13 +1725,23 @@ def get_history(
 def get_histories_by_table_and_business_date(
     db: Session,
     table_id: str,
-    target_business_date: date,
+    start_time: datetime,
+    end_time: datetime
 ):
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=KST)
+    if end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=KST)
+
+    start_time = start_time.astimezone(UTC)
+    end_time = end_time.astimezone(UTC)
+
     return (
         db.query(TableHistory)
         .filter(
             TableHistory.table_id == table_id,
-            TableHistory.business_date == target_business_date,
+            TableHistory.out_at >= start_time,
+            TableHistory.out_at <= end_time,
         )
         .order_by(TableHistory.out_at.desc())
         .all()
@@ -1768,6 +1778,8 @@ def get_history_purchase(
 def get_history_purchases_by_table(
     db: Session,
     table_id: str,
+    start_time: datetime,
+    end_time: datetime,
 ):
     return (
         db.query(TableHistoryPurchase)
