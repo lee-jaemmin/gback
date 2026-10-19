@@ -2004,11 +2004,16 @@ def run_expired_timer_check():
     "/companies/{company_id}/notifications",
     response_model=list[schemas.NotificationResponse],
 )
-def read_notifications_by_company(company_id: str, db: Session = Depends(get_db)):
+def read_notifications_by_company(
+    company_id: str,
+    start_time: datetime,
+    end_time: datetime,
+    db: Session = Depends(get_db),
+):
     db_company = crud.get_company(db, company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    return crud.get_notification_by_company(db, company_id)
+    return crud.get_notification_by_company(db, company_id, start_time, end_time)
 
 
 def run_daily_reset():

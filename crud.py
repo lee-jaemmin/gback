@@ -1898,10 +1898,27 @@ def create_timer_notification(
     return db_notification
 
 
-def get_notification_by_company(db: Session, company_id: str):
+def get_notification_by_company(
+    db: Session,
+    company_id: str,
+    start_time: datetime,
+    end_time: datetime,
+):
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=KST)
+    if end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=KST)
+
+    start_time = start_time.astimezone(UTC)
+    end_time = end_time.astimezone(UTC)
+
     return (
         db.query(Notification)
-        .filter(Notification.company_id == company_id)
+        .filter(
+            Notification.company_id == company_id,
+            Notification.created_at >= start_time,
+            Notification.created_at <= end_time,
+        )
         .order_by(Notification.created_at.desc())
         .all()
     )
