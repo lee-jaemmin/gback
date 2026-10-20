@@ -11,6 +11,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from websocket_manager import manager
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List
 import models
 import crud
@@ -1003,6 +1004,25 @@ def delete_bid(bid_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Bid not found")
     if result is True:
         return {"message": "Bid deleted successfully"}
+
+
+@app.get("/mybids", response_model=list[schemas.ReservationResponse])
+def get_my_bids(
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    mybids = db.query(models.Reservation).filter(
+        or_(
+            models.Reservation.created_by_id == user_id,
+            models.Reservation.customer_phone == db_user.phonenumber,
+        )
+    )
+    return mybids
 
 
 # =====================
