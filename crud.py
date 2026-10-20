@@ -194,6 +194,7 @@ def create_company(db: Session, company: CompanyCreate, user: User):
         db.commit()
     except Exception:
         db.rollback()
+        raise
 
     db.refresh(db_company)  # 여기서 created_at 등 자동 정보 생성
     return db_company
