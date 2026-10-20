@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Literal
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 
 # API 명세서
@@ -11,21 +11,18 @@ from datetime import datetime, date
 # COMPANY
 # =========================
 
-
-class CompanyBase(BaseModel):
+class CompanyCreate(BaseModel):
     name: str
     address: str
-    
-
-class CompanyCreate(CompanyBase):
-    pass
 
 class CompanyUpdate(BaseModel):
     insta: Optional[str] = None
+    bid_end_at: Optional[time] = None
 
-class CompanyResponse(CompanyBase):
+class CompanyResponse(BaseModel):
     id: str
     name: str
+    address: str
     created_at: datetime
     sections: list[str]
     updated_at: datetime
@@ -33,6 +30,7 @@ class CompanyResponse(CompanyBase):
     insta: Optional[str] = None
     region: Optional[str] = ""
     floor_image_path: Optional[str] = ""
+    bid_end_at: time
 
     class Config:
         from_attributes = True

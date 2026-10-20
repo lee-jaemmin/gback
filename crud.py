@@ -153,13 +153,18 @@ def get_company_region(address: str) -> str:
 
 def create_company(db: Session, company: CompanyCreate, user: User):
     invite_code = generate_invitation_code(db)
-
+    now_kst = datetime.now(KST)
     db_company = Company(
         id=str(uuid.uuid4()),
         name=company.name,
         region=get_company_region(company.address),
         address=company.address,
         invite_code=invite_code,
+        bid_end_at=datetime.combine(
+            now_kst.date(),
+            time(22,0),
+            tzinfo=KST,
+        )
     )
 
     db.add(db_company)
@@ -184,7 +189,11 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     db_company = get_company(db, company_id)
     if db_company is None:
         return None
-    db_company.insta = company_update.insta
+    if company_update.insta is not None:
+        db_company.insta = company_update.insta
+    if company_update.bid_end_at is not None:
+        db_company.bid_end_at = company_update.bid_end_at
+        
     db.commit()
     db.refresh(db_company)
     return db_company

@@ -10,7 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     JSON,
-    Enum
+    Time
 )
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, UTC, time, timedelta
@@ -44,6 +44,7 @@ class Company(Base):
     region = Column(String, nullable=True)
     address = Column(String, nullable=False)
     sections = Column(JSON, nullable=False, default=lambda: ["A", "B", "C", "D", "E"])
+    bid_end_at = Column(Time, default=lambda: time(22,0), server_default="22:00:00",nullable=False)
 
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(
