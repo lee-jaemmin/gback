@@ -480,6 +480,17 @@ class ReservationBidResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class MyBidResponse(BaseModel):
+    id: int
+    table_id: str
+    company_id: str
+    rank: int
+    bid_price: Optional[int] = None
+    is_fixed: bool = False
+
+    class Config:
+        from_attributes = True
+
 
 # =========================
 # RESERVATIONPURCHASE

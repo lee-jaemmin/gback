@@ -1006,7 +1006,7 @@ def delete_bid(bid_id: int, db: Session = Depends(get_db)):
         return {"message": "Bid deleted successfully"}
 
 
-@app.get("/mybids", response_model=list[schemas.ReservationResponse])
+@app.get("/mybids", response_model=list[schemas.MyBidResponse])
 def get_my_bids(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
@@ -1021,7 +1021,23 @@ def get_my_bids(
             models.Reservation.created_by_id == user_id,
             models.Reservation.customer_phone == db_user.phonenumber,
         )
-    )
+    ).all()
+
+    for mybid in mybids:
+        reservations_by_table = crud.get_reservations_by_table(db, mybid.table_id)
+        reservations_by_table.sort(
+            key=lambda bid: (
+                -(bid.bid_price or 0),
+                bid.created_at,
+                bid.id
+            )
+        )
+        mybid.rank = next(
+            index
+            for index, r in enumerate(reservations_by_table, start=1)
+            if r.id == mybid.id
+        )
+        mybid.company_id = mybid.table.company_id
     return mybids
 
 
