@@ -482,8 +482,8 @@ class ReservationBidResponse(BaseModel):
 
 class MyBidResponse(BaseModel):
     id: int
-    table_id: str
-    company_id: str
+    table_name: str
+    company_name: str
     rank: int
     bid_price: Optional[int] = None
     is_fixed: bool = False
