@@ -949,7 +949,7 @@ def update_categories(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
 ):
     db_user = crud.get_user(db, firebase_claims["uid"])
-    if db_user is None or db_user not in {"admin", "owner", "user"}:
+    if db_user is None or db_user.role not in {"admin", "owner", "user"}:
         raise HTTPException(status_code=403, detail="Permission Denied")
     
     db_category = crud.update_item_category(db, category_update, category_id, db_user.company_id)
