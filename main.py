@@ -2074,8 +2074,9 @@ def health():
 # ========================
 @app.get("/companies/{company_id}/menu-cache", response_model=schemas.MenuCacheResponse)
 def cache_menus(company_id: str, db: Session = Depends(get_db)):
-    db_categories = crud.get_item_categories(
-        db
+    db_categories = crud.get_item_categories_by_company(
+        db,
+        company_id
     )  # 객체 리스트 반환: itemCategory(id=1, category_name="주류", sort_order=1),
     db_items = crud.get_items_by_company(company_id, db)
     db_set_menus = crud.get_set_menus_by_company(db, company_id)
