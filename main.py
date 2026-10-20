@@ -931,7 +931,7 @@ def read_categories_by_company(
     db_user = crud.get_user(db, firebase_claims["uid"])
     if db_user is None or db_user.role not in {"owner", "admin", "user"}:
         raise HTTPException(status_code=403, detail="Permission Denied")
-    categories = crud.get_item_category(db, db_user.company_id)
+    categories = crud.get_item_categories_by_company(db, db_user.company_id)
     if not categories:
         raise HTTPException(status_code=404, detail="Category not found")
     return categories
