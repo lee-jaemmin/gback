@@ -153,28 +153,49 @@ def get_company_region(address: str) -> str:
 
 def create_company(db: Session, company: CompanyCreate, user: User):
     invite_code = generate_invitation_code(db)
-    now_kst = datetime.now(KST)
+    default_categories = [
+        '데킬라',
+        '리큐르',
+        '믹서',
+        '믹서(무료)',
+        '보드카',
+        '브랜디',
+        '샴페인',
+        '와인',
+        '위스키',
+        '진',
+        '럼'
+    ]
     db_company = Company(
         id=str(uuid.uuid4()),
         name=company.name,
         region=get_company_region(company.address),
         address=company.address,
         invite_code=invite_code,
-        bid_end_at=datetime.combine(
-            now_kst.date(),
-            time(22,0),
-            tzinfo=KST,
-        )
+        bid_end_at=time(22,0)
     )
 
     db.add(db_company)
     db.flush()
     create_tables_for_company(db, db_company.id)
     user.role = "owner"
-    user.company_id = db_company.id
-    db.commit()
-    db.refresh(db_company)  # 여기서 created_at 등 자동 정보 생성
+    user.company_id = db_company.id 
 
+    for category in default_categories:
+        db_category = ItemCategory(
+                category_name=category,
+                sort_order=0,
+                is_active=True,
+                company_id = db_company.id
+        )
+        
+        db.add(db_category)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    db.refresh(db_company)  # 여기서 created_at 등 자동 정보 생성
     return db_company
 
 
@@ -193,7 +214,7 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
         db_company.insta = company_update.insta
     if company_update.bid_end_at is not None:
         db_company.bid_end_at = company_update.bid_end_at
-        
+
     db.commit()
     db.refresh(db_company)
     return db_company
@@ -602,11 +623,12 @@ def delete_bid_list(db: Session, bid_id: int):
 # ========================
 # ITEMCATEGORY
 # ========================
-def create_item_category(db: Session, category: ItemCategoryCreate):
+def create_item_category(db: Session, category: ItemCategoryCreate, user:User):
     db_category = ItemCategory(
         category_name=category.category_name,
         sort_order=category.sort_order,
         is_active=category.is_active,
+        company_id = user.company_id
     )
 
     db.add(db_category)

@@ -239,6 +239,7 @@ class ItemCategoryUpdate(BaseModel):
 
 class ItemCategoryResponse(BaseModel):
     id: int
+    company_id: str
     category_name: str
     sort_order: int
     is_active: bool

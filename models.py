@@ -170,7 +170,7 @@ class ItemCategory(Base):
     category_name = Column(String, unique=True, index=True, nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     items = relationship("Item", back_populates="category")
 
 
