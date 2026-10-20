@@ -865,6 +865,87 @@ def set_tables_bid_end_at_all(
     return {"message": "set bid end at success"}
 
 
+@app.patch("/allow-all-bids/{company_id}")
+async def allow_all_bids(
+    company_id: str,
+    background_tasks: BackgroundTasks,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_company = crud.get_company(db, db_user.company_id)
+    if db_company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+    if not (company_id == db_company.id and db_user.role in {"owner", "admin", "user"}):
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
+    db_tables = (
+        db.query(models.TableMaster)
+        .filter(
+            models.TableMaster.company_id == db_company.id,
+            models.TableMaster.is_reserved.is_(False),
+        )
+        .with_for_update()
+        .all()
+    )
+
+    for table in db_tables:
+        bids = crud.get_reservations_by_table(db, table.id)
+        if not bids:
+            continue
+        # 동일 금액 -> 선착순 판단위해 min
+        top_bid = min(
+            bids,
+            key=lambda bid: (
+                -(bid.bid_price or 0),  # min이니까 반대로 하기 위해 -
+                bid.created_at,
+                bid.id,
+            ),
+        )
+
+        top_bid.is_fixed = True
+        table.is_reserved = True
+        top_bid.fixed_at = datetime.now(UTC)
+        top_bid.fixed_by = db_user.id
+        changed_tables = crud.delete_fixed_users_reservations(db, top_bid)
+        for table in changed_tables:
+            payload = schemas.TableResponse.model_validate(table).model_dump(
+                mode="json"
+            )
+            background_tasks.add_task(
+                manager.broadcast,
+                table.company_id,
+                {
+                    "type": "table_updated",
+                    "payload": payload,
+                },
+            )
+        background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {"type": "reservation_updated", "payload": {"table_id": table.id}},
+        )
+        if not top_bid.customer_phone:
+            print("알림톡 번호 없음.")
+        else:
+            background_tasks.add_task(
+                solapi_alimtalk.send_alimtalk,
+                top_bid.customer_phone,
+                "KA01TP260918001413298TOpXYrgbaAL",
+                "KA01PF260917045443138PqRAzw6E07o",
+                {
+                    "#{매장명}": db_company.name,
+                    "#{테이블이름}": table.tablename,
+                },
+            )
+
+    db.commit()
+    return {"message": "all top bid allowed"}
+
+
 # =====================
 # BIDLIST API
 # =====================
@@ -937,6 +1018,7 @@ def read_categories_by_company(
         raise HTTPException(status_code=404, detail="Category not found")
     return categories
 
+
 # @app.get("/categories", response_model=list[schemas.ItemCategoryResponse])
 # def read_categories(db: Session = Depends(get_db)):
 #     return crud.get_item_categories(db)
@@ -952,8 +1034,10 @@ def update_categories(
     db_user = crud.get_user(db, firebase_claims["uid"])
     if db_user is None or db_user.role not in {"admin", "owner", "user"}:
         raise HTTPException(status_code=403, detail="Permission Denied")
-    
-    db_category = crud.update_item_category(db, category_update, category_id, db_user.company_id)
+
+    db_category = crud.update_item_category(
+        db, category_update, category_id, db_user.company_id
+    )
 
     if db_category is None:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -2076,8 +2160,7 @@ def health():
 @app.get("/companies/{company_id}/menu-cache", response_model=schemas.MenuCacheResponse)
 def cache_menus(company_id: str, db: Session = Depends(get_db)):
     db_categories = crud.get_item_categories_by_company(
-        db,
-        company_id
+        db, company_id
     )  # 객체 리스트 반환: itemCategory(id=1, category_name="주류", sort_order=1),
     db_items = crud.get_items_by_company(company_id, db)
     db_set_menus = crud.get_set_menus_by_company(db, company_id)
