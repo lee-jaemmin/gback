@@ -654,7 +654,7 @@ def update_item_category(
     db_category = db.query(ItemCategory).filter(
         ItemCategory.company_id == company_id, ItemCategory.id == category_id
     ).first()
-    
+
     if db_category is None:
         return None
     if category_update.category_name is not None:
@@ -1992,37 +1992,39 @@ def reset_daily_state(db: Session):
         db.query(TablePurchase).delete(synchronize_session=False)
 
         now_kst = datetime.now(KST)
-        bid_end_at = now_kst.replace(
-            hour=22,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-        if bid_end_at <= now_kst:
-            bid_end_at += timedelta(days=1)
-        # 테이블 마스터 초기화
-        db.query(TableMaster).update(
-            {
-                TableMaster.status: "available",
-                TableMaster.customer: "",
-                TableMaster.phonenumber: "",
-                TableMaster.persons: 0,
-                TableMaster.remark: "",
-                TableMaster.total_price: 0,
-                TableMaster.purchase_summary: [],
-                TableMaster.registered_at: None,
-                TableMaster.user_id: None,
-                TableMaster.user_name: None,
-                TableMaster.is_reserved: False,
-                TableMaster.timer_started_at: None,
-                TableMaster.timer_end_at: None,
-                TableMaster.timer_alert_sent_at: None,
-                TableMaster.bid_end_at: bid_end_at,
-                TableMaster.has_reservations: False,
-                TableMaster.reserved_at: None,
-            },
-            synchronize_session=False,
-        )
+        companies = db.query(Company).all()
+
+        # 회사별 마감 시각을 적용해 테이블 마스터 초기화
+        for company in companies:
+            bid_end_at = datetime.combine(
+                now_kst.date(),
+                company.bid_end_at,
+                tzinfo=KST,
+            )
+            db.query(TableMaster).filter(
+                TableMaster.company_id == company.id
+            ).update(
+                {
+                    TableMaster.status: "available",
+                    TableMaster.customer: "",
+                    TableMaster.phonenumber: "",
+                    TableMaster.persons: 0,
+                    TableMaster.remark: "",
+                    TableMaster.total_price: 0,
+                    TableMaster.purchase_summary: [],
+                    TableMaster.registered_at: None,
+                    TableMaster.user_id: None,
+                    TableMaster.user_name: None,
+                    TableMaster.is_reserved: False,
+                    TableMaster.timer_started_at: None,
+                    TableMaster.timer_end_at: None,
+                    TableMaster.timer_alert_sent_at: None,
+                    TableMaster.bid_end_at: bid_end_at,
+                    TableMaster.has_reservations: False,
+                    TableMaster.reserved_at: None,
+                },
+                synchronize_session=False,
+            )
 
         db.commit()
         return True

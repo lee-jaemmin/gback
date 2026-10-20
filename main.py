@@ -860,6 +860,7 @@ def set_tables_bid_end_at_all(
     db_tables = crud.get_tables_by_company(db, db_company.id)
     for table in db_tables:
         table.bid_end_at = bid_option.bid_end_at
+    db_company.bid_end_at = bid_option.bid_end_at
     db.commit()
     return {"message": "set bid end at success"}
 
