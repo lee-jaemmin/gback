@@ -911,23 +911,42 @@ async def allow_all_bids(
         top_bid.fixed_at = datetime.now(UTC)
         top_bid.fixed_by = db_user.id
         changed_tables = crud.delete_fixed_users_reservations(db, top_bid)
-        for table in changed_tables:
-            payload = schemas.TableResponse.model_validate(table).model_dump(
-                mode="json"
-            )
-            background_tasks.add_task(
-                manager.broadcast,
-                table.company_id,
-                {
-                    "type": "table_updated",
-                    "payload": payload,
-                },
-            )
+
+        payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+        background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "table_updated",
+                "payload": payload,
+            },
+        )
         background_tasks.add_task(
             manager.broadcast,
             table.company_id,
             {"type": "reservation_updated", "payload": {"table_id": table.id}},
         )
+
+        for changed_table in changed_tables:
+            payload = schemas.TableResponse.model_validate(changed_table).model_dump(
+                mode="json"
+            )
+            background_tasks.add_task(
+                manager.broadcast,
+                changed_table.company_id,
+                {
+                    "type": "table_updated",
+                    "payload": payload,
+                },
+            )
+            background_tasks.add_task(
+                manager.broadcast,
+                changed_table.company_id,
+                {
+                    "type": "reservation_updated",
+                    "payload": {"table_id": changed_table.id},
+                },
+            )
         if not top_bid.customer_phone:
             print("알림톡 번호 없음.")
         else:
@@ -941,7 +960,6 @@ async def allow_all_bids(
                     "#{테이블이름}": table.tablename,
                 },
             )
-
     db.commit()
     return {"message": "all top bid allowed"}
 
