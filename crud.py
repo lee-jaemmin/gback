@@ -154,17 +154,17 @@ def get_company_region(address: str) -> str:
 def create_company(db: Session, company: CompanyCreate, user: User):
     invite_code = generate_invitation_code(db)
     default_categories = [
-        '데킬라',
-        '리큐르',
-        '믹서',
-        '믹서(무료)',
-        '보드카',
-        '브랜디',
-        '샴페인',
-        '와인',
-        '위스키',
-        '진',
-        '럼'
+        "데킬라",
+        "리큐르",
+        "믹서",
+        "믹서(무료)",
+        "보드카",
+        "브랜디",
+        "샴페인",
+        "와인",
+        "위스키",
+        "진",
+        "럼",
     ]
     db_company = Company(
         id=str(uuid.uuid4()),
@@ -172,23 +172,23 @@ def create_company(db: Session, company: CompanyCreate, user: User):
         region=get_company_region(company.address),
         address=company.address,
         invite_code=invite_code,
-        bid_end_at=time(22,0)
+        bid_end_at=time(22, 0),
     )
 
     db.add(db_company)
     db.flush()
     create_tables_for_company(db, db_company.id)
     user.role = "owner"
-    user.company_id = db_company.id 
+    user.company_id = db_company.id
 
     for category in default_categories:
         db_category = ItemCategory(
-                category_name=category,
-                sort_order=0,
-                is_active=True,
-                company_id = db_company.id
+            category_name=category,
+            sort_order=0,
+            is_active=True,
+            company_id=db_company.id,
         )
-        
+
         db.add(db_category)
     try:
         db.commit()
@@ -206,6 +206,7 @@ def get_company(db: Session, company_id: str):
 def get_companies(db: Session):  # 전체 회사 반환
     return db.query(Company).all()
 
+
 def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     db_company = get_company(db, company_id)
     if db_company is None:
@@ -219,6 +220,7 @@ def update_company(db: Session, company_id: str, company_update: CompanyUpdate):
     db.refresh(db_company)
     return db_company
 
+
 def modify_section(db: Session, company_id: str, section_change: ChangeSection):
     db_company = get_company(db, company_id)
     if db_company is None:
@@ -226,28 +228,27 @@ def modify_section(db: Session, company_id: str, section_change: ChangeSection):
     if section_change.old_name not in db_company.sections:
         return "Section not Exists"
     if section_change.new_name in db_company.sections:
-            return "Section Already Exists"
+        return "Section Already Exists"
     db_company.sections = [
-        section_change.new_name
-        if section == section_change.old_name
-        else section
+        section_change.new_name if section == section_change.old_name else section
         for section in db_company.sections
     ]
 
     db_tables = db.query(TableMaster).filter(
         TableMaster.company_id == company_id,
-        TableMaster.section == section_change.old_name
+        TableMaster.section == section_change.old_name,
     )
-    index =1
+    index = 1
     for table in db_tables:
         table.section = section_change.new_name
         table.tablename = f"{section_change.new_name}-{index}"
         index += 1
-    
+
     db.commit()
     db.refresh(db_company)
     return db_company
-    
+
+
 def add_section(db: Session, company_id: str, added_section: str):
     db_company = get_company(db, company_id)
     if db_company is None:
@@ -268,12 +269,13 @@ def add_section(db: Session, company_id: str, added_section: str):
             remark="",
             total_price=0,
             company_id=db_company.id,
-        )   
+        )
         db.add(db_table)
         index += 1
     db.commit()
     db.refresh(db_company)
     return db_company
+
 
 def delete_section(db: Session, company_id: str, removed_section: str):
     db_company = get_company(db, company_id)
@@ -294,16 +296,18 @@ def delete_section(db: Session, company_id: str, removed_section: str):
         db.query(BidList).filter(BidList.table_id == table.id).delete(
             synchronize_session=False
         )
-        db.query(TablePurchaseLog).filter(
-            TablePurchaseLog.table_id == table.id
-        ).delete(synchronize_session=False)
+        db.query(TablePurchaseLog).filter(TablePurchaseLog.table_id == table.id).delete(
+            synchronize_session=False
+        )
         db.delete(table)
 
-    db_company.sections = [section for section in db_company.sections if section != removed_section]
+    db_company.sections = [
+        section for section in db_company.sections if section != removed_section
+    ]
     db.commit()
     db.refresh(db_company)
     return db_company
-    
+
 
 def get_company_by_invite_code(db: Session, invite_code: str):
     return db.query(Company).filter(Company.invite_code == invite_code).first()
@@ -344,8 +348,6 @@ def join_company_with_code(db: Session, request: JoinCompanyWithCode, user: User
     db.commit()
     db.refresh(user)
     return user
-
-
 
 
 # ========================
@@ -623,12 +625,12 @@ def delete_bid_list(db: Session, bid_id: int):
 # ========================
 # ITEMCATEGORY
 # ========================
-def create_item_category(db: Session, category: ItemCategoryCreate, user:User):
+def create_item_category(db: Session, category: ItemCategoryCreate, user: User):
     db_category = ItemCategory(
         category_name=category.category_name,
         sort_order=category.sort_order,
         is_active=category.is_active,
-        company_id = user.company_id
+        company_id=user.company_id,
     )
 
     db.add(db_category)
@@ -670,16 +672,22 @@ def update_item_category(
 # ========================
 # ITEM
 # ========================
-def create_item(
-    db: Session,
-    item: ItemCreate,
-):
+def create_item(db: Session, item: ItemCreate, company_id: str):
+    category = db.query(ItemCategory).filter(
+        ItemCategory.id == item.category_id,
+        ItemCategory.company_id == company_id,
+        ItemCategory.is_active.is_(True),
+    ).first()
+
+    if category is None:
+        return "Category not found"
+
     db_item = Item(
         item_name=item.item_name,
         item_price=item.item_price,
         is_active=item.is_active,
-        company_id=item.company_id,
-        category_id=item.category_id,
+        company_id=company_id,
+        category_id=category.id,
         has_mixer=item.has_mixer,
     )
 
@@ -1134,17 +1142,14 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
 # RESERVATION
 # ========================
 def register_reservation(
-    db: Session,
-    reservation_input: ReservationCreate,
-    table_id: str,
-    user: User
+    db: Session, reservation_input: ReservationCreate, table_id: str, user: User
 ):
     db_table = (
         db.query(TableMaster)
         .filter(TableMaster.id == table_id)
         .with_for_update()
         .first()
-    ) # 잠금 필요
+    )  # 잠금 필요
     if db_table is None:
         return "Table not found"
 
@@ -1152,12 +1157,12 @@ def register_reservation(
         db.query(Reservation)
         .filter(Reservation.table_id == db_table.id)
         .order_by(
-            Reservation.bid_price.desc().nulls_last(), # 정렬방법.
-            Reservation.id.asc(), # 동점 시 먼저 한 놈: 현재 id가 int니까
+            Reservation.bid_price.desc().nulls_last(),  # 정렬방법.
+            Reservation.id.asc(),  # 동점 시 먼저 한 놈: 현재 id가 int니까
         )
         .first()
     )
-    
+
     is_company_staff = (
         user.role in {"owner", "admin", "user"}
         and user.company_id == db_table.company_id
@@ -1167,15 +1172,17 @@ def register_reservation(
         if not user.phone_verified:
             return "PHONE VERIFICATION NEEDED"
         count = (
-            db.query(Reservation)
-            .filter(Reservation.created_by_id == user.id)
-            .count()
+            db.query(Reservation).filter(Reservation.created_by_id == user.id).count()
         )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
         existed_reservation = (
             db.query(Reservation)
-            .filter(Reservation.created_by_id == user.id, Reservation.table_id == db_table.id).first()
+            .filter(
+                Reservation.created_by_id == user.id,
+                Reservation.table_id == db_table.id,
+            )
+            .first()
         )
         if existed_reservation is not None:
             return "RESERVATION ALREADY EXISTS"
@@ -1197,13 +1204,12 @@ def register_reservation(
     db.add(db_reservation)
     db.flush()
 
-    outbid_reservation = None # 구 1등
+    outbid_reservation = None  # 구 1등
 
-    if (
-        top_reservation is not None
-        and (db_reservation.bid_price or 0) > (top_reservation.bid_price or 0) # or 0은 bid_price가 nullable이라 미연 방지
-    ): 
-        outbid_reservation = top_reservation        
+    if top_reservation is not None and (db_reservation.bid_price or 0) > (
+        top_reservation.bid_price or 0
+    ):  # or 0은 bid_price가 nullable이라 미연 방지
+        outbid_reservation = top_reservation
 
     db.commit()
     db.refresh(db_reservation)
@@ -1269,7 +1275,7 @@ def update_reservation(
         .with_for_update()
         .first()
     )
-    db.refresh(db_reservation) 
+    db.refresh(db_reservation)
     # 잠금 이후 다시 읽는 이유: 다른 요청이 같은 예약을 변경했을 수도 있기 때문!
     just_fixed = False
     outbid_reservation = None
@@ -1382,11 +1388,7 @@ def delete_fixed_users_reservations(
     # 예약이 0가 된 테이블 리스트 반환
 
 
-def no_show(
-    db: Session,
-    reservation_id: int,
-    user: User
-):
+def no_show(db: Session, reservation_id: int, user: User):
     db_reservation = get_reservation(db, reservation_id)
     if not db_reservation.is_fixed:
         return "NOT A FIXED RESERVATION"
@@ -1614,7 +1616,7 @@ def reservation_check_in(db: Session, reservation_id: int):
     db.flush()
     reservationEmpty = False
     reservations_left = get_reservations_by_table(db, db_table.id)
-    
+
     if not reservations_left:
         reservationEmpty = True
     # TableMaster 변경: 1회
@@ -1754,10 +1756,7 @@ def get_history(
 
 
 def get_histories_by_table_and_business_date(
-    db: Session,
-    table_id: str,
-    start_time: datetime,
-    end_time: datetime
+    db: Session, table_id: str, start_time: datetime, end_time: datetime
 ):
     if start_time.tzinfo is None:
         start_time = start_time.replace(tzinfo=KST)

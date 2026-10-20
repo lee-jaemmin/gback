@@ -954,15 +954,17 @@ def update_categories(
 # ITEM API
 # =====================
 @app.post("/items", response_model=schemas.ItemResponse)
-def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
-    db_company = crud.get_company(db, item.company_id)
-    db_category = crud.get_item_category(db, item.category_id)
+def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db), firebase_claims: dict = Depends(get_verified_firebase_claims)):
+    db_user = crud.get_user(db, firebase_claims["uid"])
+    if db_user is None or db_user.role not in {"admin", "owner", "user"}:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    db_company = crud.get_company(db, db_user.company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    if db_category is None:
+    result = crud.create_item(db, item, db_user.company_id)
+    if result == "Category not found":
         raise HTTPException(status_code=404, detail="Category not found")
-    return crud.create_item(db, item)
-
+    return result
 
 @app.get("/items/{item_id}", response_model=schemas.ItemResponse)
 def read_item(item_id: int, db: Session = Depends(get_db)):

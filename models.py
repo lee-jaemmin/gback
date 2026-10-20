@@ -167,7 +167,7 @@ class ItemCategory(Base):
     __tablename__ = "item_categories"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    category_name = Column(String, unique=True, index=True, nullable=False)
+    category_name = Column(String, index=True, nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
