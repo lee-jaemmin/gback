@@ -10,7 +10,8 @@ from sqlalchemy import (
     ForeignKey,
     Text,
     JSON,
-    Time
+    Time,
+    UniqueConstraint
 )
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, UTC, time, timedelta
@@ -165,7 +166,13 @@ class BidList(Base):
 
 class ItemCategory(Base):
     __tablename__ = "item_categories"
-
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "category_name",
+            name="uq_item_categories_company_category_name",
+        ),
+    )
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     category_name = Column(String, index=True, nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
