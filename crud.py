@@ -644,15 +644,17 @@ def get_item_category(db: Session, category_id: int):
     return db.query(ItemCategory).filter(ItemCategory.id == category_id).first()
 
 
-def get_item_categories(db: Session):
-    return db.query(ItemCategory).all()
+def get_item_categories_by_company(db: Session, company_id: str):
+    return db.query(ItemCategory).filter(ItemCategory.company_id == company_id).all()
 
 
 def update_item_category(
-    db: Session, category_id: int, category_update: ItemCategoryUpdate
+    db: Session, category_update: ItemCategoryUpdate, category_id: int, company_id: str
 ):
-    db_category = get_item_category(db, category_id)
-
+    db_category = db.query(ItemCategory).filter(
+        ItemCategory.company_id == company_id, ItemCategory.id == category_id
+    ).first()
+    
     if db_category is None:
         return None
     if category_update.category_name is not None:
@@ -673,11 +675,15 @@ def update_item_category(
 # ITEM
 # ========================
 def create_item(db: Session, item: ItemCreate, company_id: str):
-    category = db.query(ItemCategory).filter(
-        ItemCategory.id == item.category_id,
-        ItemCategory.company_id == company_id,
-        ItemCategory.is_active.is_(True),
-    ).first()
+    category = (
+        db.query(ItemCategory)
+        .filter(
+            ItemCategory.id == item.category_id,
+            ItemCategory.company_id == company_id,
+            ItemCategory.is_active.is_(True),
+        )
+        .first()
+    )
 
     if category is None:
         return "Category not found"

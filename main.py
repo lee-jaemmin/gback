@@ -923,18 +923,22 @@ def create_category(
     return crud.create_item_category(db, category, db_user)
 
 
-@app.get("/categories/{category_id}", response_model=schemas.ItemCategoryResponse)
-def read_category(category_id: int, db: Session = Depends(get_db)):
-    db_category = crud.get_item_category(db, category_id)
-
-    if db_category is None:
+@app.get("/categories-by-company", response_model=list[schemas.ItemCategoryResponse])
+def read_categories_by_company(
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+):
+    db_user = crud.get_user(db, firebase_claims["uid"])
+    if db_user is None or db_user.role not in {"owner", "admin", "user"}:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    categories = crud.get_item_category(db, db_user.company_id)
+    if not categories:
         raise HTTPException(status_code=404, detail="Category not found")
-    return db_category
+    return categories
 
-
-@app.get("/categories", response_model=list[schemas.ItemCategoryResponse])
-def read_categories(db: Session = Depends(get_db)):
-    return crud.get_item_categories(db)
+# @app.get("/categories", response_model=list[schemas.ItemCategoryResponse])
+# def read_categories(db: Session = Depends(get_db)):
+#     return crud.get_item_categories(db)
 
 
 @app.patch("/categories/{category_id}", response_model=schemas.ItemCategoryResponse)
@@ -942,8 +946,13 @@ def update_categories(
     category_id: int,
     category_update: schemas.ItemCategoryUpdate,
     db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
 ):
-    db_category = crud.update_item_category(db, category_id, category_update)
+    db_user = crud.get_user(db, firebase_claims["uid"])
+    if db_user is None or db_user not in {"admin", "owner", "user"}:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+    
+    db_category = crud.update_item_category(db, category_update, category_id, db_user.company_id)
 
     if db_category is None:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -954,7 +963,11 @@ def update_categories(
 # ITEM API
 # =====================
 @app.post("/items", response_model=schemas.ItemResponse)
-def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db), firebase_claims: dict = Depends(get_verified_firebase_claims)):
+def create_item(
+    item: schemas.ItemCreate,
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+):
     db_user = crud.get_user(db, firebase_claims["uid"])
     if db_user is None or db_user.role not in {"admin", "owner", "user"}:
         raise HTTPException(status_code=403, detail="Permission Denied")
@@ -965,6 +978,7 @@ def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db), firebas
     if result == "Category not found":
         raise HTTPException(status_code=404, detail="Category not found")
     return result
+
 
 @app.get("/items/{item_id}", response_model=schemas.ItemResponse)
 def read_item(item_id: int, db: Session = Depends(get_db)):
