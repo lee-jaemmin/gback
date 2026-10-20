@@ -1025,7 +1025,7 @@ def get_my_bids(
 
     for mybid in mybids:
         reservations_by_table = crud.get_reservations_by_table(db, mybid.table_id)
-        mybid.table_name = mybid.table.tablename,
+        mybid.table_name = mybid.table.tablename
         mybid.company_name = mybid.table.company.name
                 
         reservations_by_table.sort(
