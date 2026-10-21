@@ -1370,6 +1370,7 @@ def delete_fixed_users_reservations(
     reservation: Reservation,
 ):
     changed_tables = []
+    changed_table_ids = set()
     reservations_left = (
         db.query(Reservation)
         .filter(
@@ -1385,14 +1386,16 @@ def delete_fixed_users_reservations(
             continue
         db.delete(reservation)
         db.flush()
+        if db_table.id not in changed_table_ids:
+            changed_tables.append(db_table)
+            changed_table_ids.add(db_table.id)
         db_left_reservations = get_reservations_by_table(db, db_table.id)
         if not db_left_reservations:
             db_table.has_reservations = False
             db_table.is_reserved = False
             db_table.reserved_at = None
-            changed_tables.append(db_table)
     return changed_tables
-    # 예약이 0가 된 테이블 리스트 반환
+    # 예약이 삭제된 테이블 리스트 반환
 
 
 def no_show(db: Session, reservation_id: int, user: User):

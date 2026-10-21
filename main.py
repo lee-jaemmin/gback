@@ -1564,6 +1564,14 @@ async def update_reservation(
                 "payload": payload,
             },
         )
+        background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "reservation_updated",
+                "payload": {"table_id": table.id},
+            },
+        )
 
     background_tasks.add_task(
         manager.broadcast,
