@@ -1448,7 +1448,7 @@ def delete_reservation(
     db_user = get_user(db, request_user_id)  # 요청자 누군지
     if db_user is None:
         return "CURRENT USER NOT FOUND"
-    is_oneself = db_reservation.created_by_id == request_user_id
+    is_oneself = db_reservation.customer_phone == db_user.phonenumber
     is_company_staff = (
         db_user.role in {"owner", "admin", "user"}
         and db_user.company_id == db_table.company_id
