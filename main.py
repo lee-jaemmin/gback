@@ -726,6 +726,40 @@ def change_owner(
     return requester
 
 
+@app.patch("/change-role/{staff_id}", response_model=schemas.UserResponse)
+def change_role(
+    staff_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    user_id = firebase_claims["uid"] # 사장놈
+    owner = crud.get_user(db, user_id)
+    if owner is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if owner.role != "owner":
+        raise HTTPException(status_code=403, detail="Permission denied")
+    staff = crud.get_user(db, staff_id)
+    if staff is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_same_company = (
+        owner.company_id is not None
+        and staff.company_id is not None
+        and owner.company_id == staff.company_id
+    )
+    if not is_same_company:
+        raise HTTPException(status_code=409, detail="Not a same company")
+
+    if staff.role == "admin":
+        staff.role = "user"
+    else:
+        staff.role = "admin"
+    
+    db.commit()
+    db.refresh(staff)
+    return staff
+
+
 # =====================
 # TABLE API
 # =====================
