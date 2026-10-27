@@ -290,19 +290,19 @@ class ItemResponse(ItemBase):
 # =========================
 
 
-class TablePurchaseCreate(BaseModel):
-    table_id: str
-    item_id: Optional[int] = None
-    quantity: int = 1
-    set_menu_id: Optional[int] = None
+# class TablePurchaseCreate(BaseModel):
+#     table_id: str
+#     item_id: Optional[int] = None
+#     quantity: int = 1
+#     set_menu_id: Optional[int] = None
 
-    @model_validator(mode="after")
-    def validate_product_type(self):
-        if(self.item_id is None) == (self.set_menu_id == None):
-            raise ValueError (
-                "item_id와 set_menu_id 중 하나만 입력해야합니다."
-            )
-        return self
+#     @model_validator(mode="after")
+#     def validate_product_type(self):
+#         if(self.item_id is None) == (self.set_menu_id == None):
+#             raise ValueError (
+#                 "item_id와 set_menu_id 중 하나만 입력해야합니다."
+#             )
+#         return self
 
 
 class TablePurchaseUpdate(BaseModel):
