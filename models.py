@@ -103,11 +103,6 @@ class TableMaster(Base):
     total_price = Column(Integer, default=0, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
 
-    position_x = Column(Numeric, default=0, nullable=False)
-    position_y = Column(Numeric, default=0, nullable=False)
-    width = Column(Integer, default=10, nullable=False)
-    height = Column(Integer, default=10, nullable=False)
-
     is_reserved = Column(Boolean, default=False)
     timer_started_at = Column(DateTime(timezone=True), nullable=True)
     timer_end_at = Column(DateTime(timezone=True), nullable=True, index=True)
@@ -126,6 +121,7 @@ class TableMaster(Base):
     bid_available = Column(Boolean, default=True)
     least_bid_price = Column(Integer, default=0, nullable=True)
     has_reservations = Column(Boolean, default=False)
+    from_bid = Column(Boolean, default=False, nullable=False)
 
     company_id = Column(String, ForeignKey("companies.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
@@ -424,3 +420,16 @@ class SetMenuItem(Base):
     item_id = Column(Integer, ForeignKey("items.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     set_menu = relationship("SetMenu", back_populates="set_menu_items")
+
+class BidHistory(Base):
+    __tablename__ = "bid_histories"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    company_id = Column(String, nullable=False)
+    company_name = Column(String, index=True, nullable=False)
+    table_id = Column(String, nullable=False)
+    table_name = Column(String, nullable=False)
+    reservation_id = Column(Integer, nullable=False)
+    min_price = Column(Integer, nullable=False)
+    bid_price = Column(Integer, nullable=False)
+    extra_income = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)

@@ -17,6 +17,7 @@ from models import (
     LogHistory,
     SetMenu,
     SetMenuItem,
+    BidHistory,
 )
 from schemas import (
     CompanyCreate,
@@ -471,6 +472,7 @@ def create_table(db: Session, table: TableCreate):
         company_id=table.company_id,
         user_id=table.user_id,
         user_name=table.user_name,
+        from_bid=False,
     )
 
     db.add(db_table)
@@ -553,6 +555,7 @@ def create_tables_for_company(
                     company_id=company_id,
                     user_id=None,
                     user_name=None,
+                    from_bid=False,
                 )
             )
     db.add_all(default_tables)
@@ -652,9 +655,11 @@ def get_item_categories_by_company(db: Session, company_id: str):
 def update_item_category(
     db: Session, category_update: ItemCategoryUpdate, category_id: int, company_id: str
 ):
-    db_category = db.query(ItemCategory).filter(
-        ItemCategory.company_id == company_id, ItemCategory.id == category_id
-    ).first()
+    db_category = (
+        db.query(ItemCategory)
+        .filter(ItemCategory.company_id == company_id, ItemCategory.id == category_id)
+        .first()
+    )
 
     if db_category is None:
         return None
@@ -1290,7 +1295,9 @@ def update_reservation(
     db_user = get_user(db, request_user_id)  # 현재 요청자 누군지
     if db_user is None:
         return "CURRENT USER NOT FOUND"
-    is_oneself = db_reservation.customer_phone == db_user.phonenumber # 폰 번호로 사람 식별
+    is_oneself = (
+        db_reservation.customer_phone == db_user.phonenumber
+    )  # 폰 번호로 사람 식별
     is_company_staff = (
         db_user.role in {"owner", "admin", "user"}
         and db_user.company_id == db_table.company_id
@@ -1344,17 +1351,34 @@ def update_reservation(
     if (
         reservation_update.is_fixed is not None
         and is_company_staff
-        and reservation_update.is_fixed != db_reservation.is_fixed  # 등록 / 취소
+        and reservation_update.is_fixed != db_reservation.is_fixed  # 수락 / 취소
     ):
         db_reservation.is_fixed = reservation_update.is_fixed
         db_table.is_reserved = reservation_update.is_fixed
-        if reservation_update.is_fixed:
+        if reservation_update.is_fixed:  # 비딩 수락이면
             db_reservation.fixed_at = datetime.now(UTC)
             db_reservation.fixed_by = db_user.id
             just_fixed = True
-        else:
+            db_table.from_bid = True
+            db_bid_history = BidHistory(
+                company_id=db_table.company_id,
+                company_name=db_table.company.name,
+                table_id=db_table.id,
+                table_name=db_table.tablename,
+                reservation_id=db_reservation.id,
+                min_price=db_table.least_bid_price or 0,
+                bid_price=db_reservation.bid_price or 0,
+                extra_income=(db_reservation.bid_price or 0)
+                - (db_table.least_bid_price or 0),
+            )
+            db.add(db_bid_history)
+        else:  # 취소면
             db_reservation.fixed_at = None
             db_reservation.arrival_at = None
+            db_table.from_bid = False
+            bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
+            if bid_history is not None:
+                db.delete(bid_history)
         if db_table.is_reserved:
             changed_tables = delete_fixed_users_reservations(db, db_reservation)
     if db_reservation.is_fixed and reservation_update.arrival_at is not None:
@@ -1421,6 +1445,12 @@ def no_show(db: Session, reservation_id: int, user: User):
     if reservation_created_by.role == "customer":
         reservation_created_by.no_show += 1
 
+    bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
+    if bid_history is not None:
+        db.delete(bid_history)
+
+    db_table.from_bid = False
+
     db.delete(db_reservation)
     db.flush()
     db_left_reservations = get_reservations_by_table(db, db_table.id)
@@ -1456,6 +1486,11 @@ def delete_reservation(
 
     if not (is_company_staff or is_oneself):
         return "PERMISSION DENIED"
+    
+    bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
+    if bid_history is not None:
+        db.delete(bid_history)
+    db_table.from_bid = False
 
     db.delete(db_reservation)
     db.flush()
@@ -1753,6 +1788,7 @@ def table_out(
     db_table.timer_started_at = None
     db_table.timer_end_at = None
     db_table.timer_alert_sent_at = None
+    db_table.from_bid = False
 
     db.commit()
     return db_history
@@ -2005,9 +2041,7 @@ def reset_daily_state(db: Session):
                 company.bid_end_at,
                 tzinfo=KST,
             )
-            db.query(TableMaster).filter(
-                TableMaster.company_id == company.id
-            ).update(
+            db.query(TableMaster).filter(TableMaster.company_id == company.id).update(
                 {
                     TableMaster.status: "available",
                     TableMaster.customer: "",
@@ -2026,6 +2060,7 @@ def reset_daily_state(db: Session):
                     TableMaster.bid_end_at: bid_end_at,
                     TableMaster.has_reservations: False,
                     TableMaster.reserved_at: None,
+                    TableMaster.from_bid: False
                 },
                 synchronize_session=False,
             )

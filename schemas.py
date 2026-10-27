@@ -107,12 +107,6 @@ class TableBase(BaseModel):
     phonenumber: str = ""
     persons: int = 0
     remark: str = ""
-
-    position_x: float = 0
-    position_y: float = 0
-    width: int = 0
-    height: int = 0
-
     total_price: int = 0
     registered_at: Optional[datetime] = None
     timer_started_at: Optional[datetime] = None
@@ -122,6 +116,7 @@ class TableBase(BaseModel):
 
     least_bid_price: int = 0
     has_reservations: bool = False
+    from_bid: bool = False
 
     is_reserved: bool = False
     purchase_summary: Optional[list[str]] = None
@@ -147,11 +142,6 @@ class TableUpdate(BaseModel):
     total_price: Optional[int] = None
     registered_at: Optional[datetime] = None
 
-    position_x: Optional[float] = None
-    position_y: Optional[float] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
-
     user_id: Optional[str] = None
     user_name: Optional[str] = None
     timer_started_at: Optional[datetime] = None
@@ -165,6 +155,7 @@ class TableUpdate(BaseModel):
     company_id: Optional[str] = None
     purchase_summary: Optional[list[str]] = None
     offer_products: Optional[str] = None
+    from_bid: Optional[bool] = None
     
 
 

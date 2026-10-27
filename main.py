@@ -732,7 +732,7 @@ def change_role(
     firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
-    user_id = firebase_claims["uid"] # 사장놈
+    user_id = firebase_claims["uid"]  # 사장놈
     owner = crud.get_user(db, user_id)
     if owner is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -754,7 +754,7 @@ def change_role(
         staff.role = "user"
     else:
         staff.role = "admin"
-    
+
     db.commit()
     db.refresh(staff)
     return staff
@@ -940,9 +940,21 @@ async def allow_all_bids(
                 bid.id,
             ),
         )
+        db_bid_history = models.BidHistory(
+            company_id=table.company_id,
+            company_name=table.company.name,
+            table_id=table.id,
+            table_name=table.tablename,
+            reservation_id=top_bid.id,
+            min_price=table.least_bid_price or 0,
+            bid_price=top_bid.bid_price or 0,
+            extra_income=(top_bid.bid_price or 0) - (table.least_bid_price or 0),
+        )
+        db.add(db_bid_history)
 
         top_bid.is_fixed = True
         table.is_reserved = True
+        table.from_bid = True
         top_bid.fixed_at = datetime.now(UTC)
         top_bid.fixed_by = db_user.id
         changed_tables = crud.delete_fixed_users_reservations(db, top_bid)
@@ -1050,24 +1062,24 @@ def get_my_bids(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    mybids = db.query(models.Reservation).filter(
-        or_(
-            models.Reservation.created_by_id == user_id,
-            models.Reservation.customer_phone == db_user.phonenumber,
+    mybids = (
+        db.query(models.Reservation)
+        .filter(
+            or_(
+                models.Reservation.created_by_id == user_id,
+                models.Reservation.customer_phone == db_user.phonenumber,
+            )
         )
-    ).all()
+        .all()
+    )
 
     for mybid in mybids:
         reservations_by_table = crud.get_reservations_by_table(db, mybid.table_id)
         mybid.table_name = mybid.table.tablename
         mybid.company_name = mybid.table.company.name
-                
+
         reservations_by_table.sort(
-            key=lambda bid: (
-                -(bid.bid_price or 0),
-                bid.created_at,
-                bid.id
-            )
+            key=lambda bid: (-(bid.bid_price or 0), bid.created_at, bid.id)
         )
         mybid.rank = next(
             index
@@ -1670,6 +1682,7 @@ async def no_show(
         raise HTTPException(status_code=403, detail="Permission Denied")
 
     table = result
+
     payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
