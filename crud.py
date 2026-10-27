@@ -77,7 +77,9 @@ def recalculate_table_total_price(db: Session, table_id: str):
 
     logs = get_purchase_logs(db, table_id)
 
-    db_table.total_price = sum(log.total_price for log in logs)
+    db_table.total_price = (db_table.base_price or 0) + sum(
+        log.total_price for log in logs
+    )
 
     return db_table
 
@@ -469,6 +471,7 @@ def create_table(db: Session, table: TableCreate):
         persons=table.persons,
         remark=table.remark,
         total_price=table.total_price,
+        base_price=table.base_price,
         company_id=table.company_id,
         user_id=table.user_id,
         user_name=table.user_name,
@@ -552,6 +555,7 @@ def create_tables_for_company(
                     persons=0,
                     remark=None,
                     total_price=0,
+                    base_price=0,
                     company_id=company_id,
                     user_id=None,
                     user_name=None,
@@ -1051,14 +1055,15 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
             item = get_item(purchase.item_id, db)
             if item is None:
                 return "ITEM NOT FOUND"
+            log_unit_price = 0 if db_table.from_bid else item.item_price
             db_log = TablePurchaseLog(
                 table_id=purchases.table_id,
                 item_id=item.id,
                 item_name=item.item_name,
                 set_menu_id=None,
                 quantity=purchase.quantity,
-                unit_price=item.item_price,
-                total_price=item.item_price * purchase.quantity,
+                unit_price=log_unit_price,
+                total_price=log_unit_price * purchase.quantity,
                 user_id=user.id,
                 user_name=user.username,
                 batch_id=purchases.batch_id,
@@ -1096,14 +1101,15 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
 
             if set_menu is None:
                 return "SET MENU NOT FOUND"
+            log_unit_price = 0 if db_table.from_bid else set_menu.set_price
             db_log = TablePurchaseLog(
                 table_id=purchases.table_id,
                 item_id=None,
                 item_name=set_menu.set_name,
                 set_menu_id=purchase.set_menu_id,
                 quantity=purchase.quantity,
-                unit_price=set_menu.set_price,
-                total_price=set_menu.set_price * purchase.quantity,
+                unit_price=log_unit_price,
+                total_price=log_unit_price * purchase.quantity,
                 user_id=user.id,
                 user_name=user.username,
                 batch_id=purchases.batch_id,
@@ -1144,7 +1150,8 @@ def register_purchase(db: Session, purchases: PurchaseBatchCreate, user: User):
                     db.flush()
             db.add(db_log)
     db.flush()
-    recalculate_table_total_price(db, db_table.id)
+    if not db_table.from_bid:
+        recalculate_table_total_price(db, db_table.id)
     db_table.purchase_summary = build_purchase_summary(db, db_table.id)
     db.commit()
     return {"message": "registerd purchase successfully"}
@@ -1360,6 +1367,8 @@ def update_reservation(
             db_reservation.fixed_by = db_user.id
             just_fixed = True
             db_table.from_bid = True
+            db_table.base_price = db_reservation.bid_price or 0
+            db_table.total_price = db_table.base_price
             db_bid_history = BidHistory(
                 company_id=db_table.company_id,
                 company_name=db_table.company.name,
@@ -1376,6 +1385,8 @@ def update_reservation(
             db_reservation.fixed_at = None
             db_reservation.arrival_at = None
             db_table.from_bid = False
+            db_table.base_price = 0
+            db_table.total_price = 0
             bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
             if bid_history is not None:
                 db.delete(bid_history)
@@ -1450,6 +1461,8 @@ def no_show(db: Session, reservation_id: int, user: User):
         db.delete(bid_history)
 
     db_table.from_bid = False
+    db_table.base_price = 0
+    db_table.total_price = 0
 
     db.delete(db_reservation)
     db.flush()
@@ -1490,7 +1503,9 @@ def delete_reservation(
     bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
     if bid_history is not None:
         db.delete(bid_history)
-    db_table.from_bid = False
+        db_table.from_bid = False
+        db_table.base_price = 0
+        db_table.total_price = 0
 
     db.delete(db_reservation)
     db.flush()
@@ -1681,7 +1696,8 @@ def reservation_check_in(db: Session, reservation_id: int):
         if reservations_left
         else None
     )
-    recalculate_table_total_price(db, table_id)
+    if not db_table.from_bid:
+        recalculate_table_total_price(db, table_id)
     db.commit()
     db.refresh(db_table)
     return db_table
@@ -1781,6 +1797,7 @@ def table_out(
     db_table.persons = 0
     db_table.remark = ""
     db_table.total_price = 0
+    db_table.base_price = 0
     db_table.purchase_summary = []
     db_table.registered_at = None
     db_table.user_id = None
@@ -2049,6 +2066,7 @@ def reset_daily_state(db: Session):
                     TableMaster.persons: 0,
                     TableMaster.remark: "",
                     TableMaster.total_price: 0,
+                    TableMaster.base_price: 0,
                     TableMaster.purchase_summary: [],
                     TableMaster.registered_at: None,
                     TableMaster.user_id: None,
@@ -2101,6 +2119,8 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_to.status = db_from.status
     db_to.registered_at = db_from.registered_at
     db_to.total_price = db_from.total_price
+    db_to.base_price = db_from.base_price
+    db_to.from_bid = db_from.from_bid
     db_to.timer_started_at = db_from.timer_started_at
     db_to.timer_alert_sent_at = db_from.timer_alert_sent_at
     db_to.timer_end_at = db_from.timer_end_at
@@ -2119,6 +2139,8 @@ def moveTable(db: Session, from_table_id: str, to_table_id: str):
     db_from.status = "available"
     db_from.registered_at = None
     db_from.total_price = 0
+    db_from.base_price = 0
+    db_from.from_bid = False
     db_from.timer_started_at = None
     db_from.timer_alert_sent_at = None
     db_from.timer_end_at = None

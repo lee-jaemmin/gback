@@ -955,6 +955,8 @@ async def allow_all_bids(
         top_bid.is_fixed = True
         table.is_reserved = True
         table.from_bid = True
+        table.base_price = top_bid.bid_price or 0
+        table.total_price = table.base_price
         top_bid.fixed_at = datetime.now(UTC)
         top_bid.fixed_by = db_user.id
         changed_tables = crud.delete_fixed_users_reservations(db, top_bid)

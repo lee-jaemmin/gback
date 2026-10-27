@@ -108,6 +108,7 @@ class TableBase(BaseModel):
     persons: int = 0
     remark: str = ""
     total_price: int = 0
+    base_price: int = 0
     registered_at: Optional[datetime] = None
     timer_started_at: Optional[datetime] = None
     timer_end_at: Optional[datetime] = None
@@ -140,6 +141,7 @@ class TableUpdate(BaseModel):
     remark: Optional[str] = None
 
     total_price: Optional[int] = None
+    base_price: Optional[int] = None
     registered_at: Optional[datetime] = None
 
     user_id: Optional[str] = None

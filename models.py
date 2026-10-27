@@ -101,6 +101,7 @@ class TableMaster(Base):
     remark = Column(Text, default="", nullable=True)
 
     total_price = Column(Integer, default=0, nullable=False)
+    base_price = Column(Integer, default=0, nullable=False)
     registered_at = Column(DateTime(timezone=True), nullable=True)
 
     is_reserved = Column(Boolean, default=False)
