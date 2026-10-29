@@ -544,6 +544,7 @@ def ensure_current_user(
             email,
             user.tablecardfields,
             user.fcmtoken,
+            user.signup_from,
         )
     except crud.UserEmailConflictError:
         raise HTTPException(

@@ -81,6 +81,7 @@ class User(Base):
     phonenumber = Column(String, nullable=True)
     phone_verified = Column(Boolean, default=False, nullable=False)
     no_show = Column(Integer, default=0, nullable=False)
+    signup_from = Column(String(100), nullable=True)
 
     company = relationship("Company", back_populates="users")
     tables = relationship("TableMaster", back_populates="user")

@@ -65,6 +65,7 @@ class UserBase(BaseModel):
     fcmtoken: Optional[str] = None
     tablecardfields: List[str] = Field(default_factory=lambda: ["purchases", "persons"])
     is_push_on: bool = True
+    signup_from: Optional[str] = Field(default=None, max_length=100)
 
 
 class UserCreate(UserBase):

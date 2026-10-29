@@ -364,6 +364,7 @@ def create_user(db: Session, user: UserCreate):
         email=user.email,
         fcmtoken=user.fcmtoken,
         tablecardfields=user.tablecardfields,
+        signup_from=user.signup_from,
     )
 
     db.add(db_user)
@@ -384,6 +385,7 @@ def ensure_user_profile(
     email: str,
     tablecardfields: list[str],
     fcmtoken: str | None,
+    signup_from: str | None,
 ):
     db_user = get_user(db, user_id)
     if db_user is not None:
@@ -398,6 +400,7 @@ def ensure_user_profile(
         email=email,
         fcmtoken=fcmtoken,
         tablecardfields=tablecardfields,
+        signup_from=signup_from,
     )
     db.add(db_user)
 
