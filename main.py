@@ -1466,7 +1466,7 @@ async def register_reservation(
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,
             outbid_reservation.customer_phone,
-            "KA01TP2609180032320828qG1M1RwxX4",
+            "KA01TP261030063106160YcMUXm3SyIL",
             "KA01PF260917045443138PqRAzw6E07o",
             {"#{매장명}": db_company.name, "#{테이블이름}": db_table.tablename},
         )
@@ -1648,7 +1648,7 @@ async def update_reservation(
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,
             outbid_reservation.customer_phone,
-            "KA01TP2609180032320828qG1M1RwxX4",
+            "KA01TP261030063106160YcMUXm3SyIL",
             "KA01PF260917045443138PqRAzw6E07o",
             {"#{매장명}": db_company.name, "#{테이블이름}": db_table.tablename},
         )
