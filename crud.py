@@ -189,6 +189,7 @@ def create_company(db: Session, company: CompanyCreate, user: User):
             category_name=category,
             sort_order=0,
             is_active=True,
+            is_mixer=category == "믹서(무료)",
             company_id=db_company.id,
         )
 
@@ -641,6 +642,7 @@ def create_item_category(db: Session, category: ItemCategoryCreate, user: User):
         category_name=category.category_name,
         sort_order=category.sort_order,
         is_active=category.is_active,
+        is_mixer=category.is_mixer,
         company_id=user.company_id,
     )
 
@@ -678,6 +680,9 @@ def update_item_category(
 
     if category_update.is_active is not None:
         db_category.is_active = category_update.is_active
+
+    if category_update.is_mixer is not None:
+        db_category.is_mixer = category_update.is_mixer
 
     db.commit()
     db.refresh(db_category)

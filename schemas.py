@@ -223,12 +223,14 @@ class ItemCategoryCreate(BaseModel):
     category_name: str
     sort_order: int = 0
     is_active: bool = True
+    is_mixer: bool = False
 
 
 class ItemCategoryUpdate(BaseModel):
     category_name: Optional[str] = None
     sort_order: Optional[int] = None
     is_active: Optional[bool] = None
+    is_mixer: Optional[bool] = None
 
 
 class ItemCategoryResponse(BaseModel):
@@ -237,6 +239,7 @@ class ItemCategoryResponse(BaseModel):
     category_name: str
     sort_order: int
     is_active: bool
+    is_mixer: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -719,6 +722,7 @@ class CategoryCache(BaseModel):
     category_name: str
     sort_order: int
     is_active: bool
+    is_mixer: Optional[bool] = False
 
     class Config:
         from_attributes = True
