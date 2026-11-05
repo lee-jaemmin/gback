@@ -1,4 +1,3 @@
-#check
 from fastapi import ( 
     BackgroundTasks,
     Depends,
@@ -17,7 +16,7 @@ from typing import List
 import models
 import crud
 import schemas
-from database import engine, get_db, SessionLocal
+from database import get_db, SessionLocal
 from typing import Optional
 from firebase_push import send_push_to_token
 from firebase_auth import get_verified_firebase_claims
@@ -31,7 +30,7 @@ import uuid
 import solapi_alimtalk
 import os
 
-models.Base.metadata.create_all(bind=engine)
+APP_ENV = os.getenv("APP_ENV", "local")
 
 scheduler = BackgroundScheduler(timezone=ZoneInfo("Asia/Seoul"))
 
@@ -155,6 +154,10 @@ def send_reservation_cancelled_push(company_id: str, table_id: str, tablename: s
 
 
 def start_scheduler():
+    if APP_ENV != "production":
+        print(f"[Scheduler] disabled in {APP_ENV}")
+        return
+
     if scheduler.running:
         return
 
@@ -2267,7 +2270,7 @@ async def websocket_company(websocket: WebSocket, company_id: str):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "env": "staging"}
+    return {"status": "ok", "env": APP_ENV}
 
 
 # ========================
