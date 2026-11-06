@@ -54,6 +54,19 @@ class ChangeSection(BaseModel):
     old_name: str
     new_name: str
 
+class PublicTableResponse(BaseModel):
+    id: str
+    company_id: str
+    tablename: str
+    section: str
+    status: str
+    least_bid_price: int
+    has_reservations: bool
+    is_reserved: bool
+    bid_available: bool
+    bid_end_at: Optional[datetime]
+    offer_products: Optional[str]
+    
 # =========================
 # USER
 # =========================

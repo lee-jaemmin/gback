@@ -527,6 +527,14 @@ def delete_section(
 
     return result
 
+# 공개 테이블
+@app.get(
+    "/public/companies/{company_id}/tables",
+    response_model=list[schemas.PublicTableResponse],
+)
+def read_public_tables(company_id: str, db: Session = Depends(get_db)):
+    return crud.get_tables_by_company(db, company_id)
+
 
 # =====================
 # USER API
@@ -781,7 +789,11 @@ def create_table(table: schemas.TableCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/tables/{table_id}", response_model=schemas.TableResponse)
-def read_table(table_id: str, db: Session = Depends(get_db)):
+def read_table(
+    table_id: str,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
@@ -790,7 +802,10 @@ def read_table(table_id: str, db: Session = Depends(get_db)):
 
 @app.get("/companies/{company_id}/tables", response_model=list[schemas.TableResponse])
 def read_tables_by_company(
-    company_id: str, section: Optional[str] = None, db: Session = Depends(get_db)
+    company_id: str,
+    section: Optional[str] = None,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
 ):
     if section is not None:
         return crud.get_tables_by_company_and_section(db, company_id, section)
