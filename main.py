@@ -799,7 +799,7 @@ def read_table(
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
 
-
+#직원용
 @app.get("/companies/{company_id}/tables", response_model=list[schemas.TableResponse])
 def read_tables_by_company(
     company_id: str,
