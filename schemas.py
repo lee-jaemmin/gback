@@ -54,21 +54,7 @@ class ChangeSection(BaseModel):
     old_name: str
     new_name: str
 
-class PublicTableResponse(BaseModel):
-    id: str
-    company_id: str
-    tablename: str
-    section: str
-    status: str
-    has_reservations: bool
-    is_reserved: bool
-    bid_available: bool
-    registered_at: Optional[datetime]
-    reserved_at: Optional[datetime]
-    bid_end_at: datetime
 
-    class Config:
-        from_attributes = True
 
 # =========================
 # USER
@@ -187,6 +173,24 @@ class TableResponse(TableBase):
     user_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PublicTableResponse(BaseModel):
+    id: str
+    company_id: str
+    tablename: str
+    section: str
+    status: str
+    has_reservations: bool
+    is_reserved: bool
+    bid_available: bool
+    registered_at: Optional[datetime]
+    reserved_at: Optional[datetime]
+    bid_end_at: datetime
+    least_bid_price: Optional[int]
+    offer_products: Optional[str]
 
     class Config:
         from_attributes = True
