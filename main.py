@@ -527,14 +527,6 @@ def delete_section(
 
     return result
 
-# 공개 테이블
-@app.get(
-    "/public/companies/{company_id}/tables",
-    response_model=list[schemas.PublicTableResponse],
-)
-def read_public_tables(company_id: str, db: Session = Depends(get_db)):
-    return crud.get_tables_by_company(db, company_id)
-
 
 # =====================
 # USER API
@@ -1056,6 +1048,20 @@ async def allow_all_bids(
     db.commit()
     return {"message": "all top bid allowed"}
 
+# 공개 테이블
+@app.get(
+    "/public/companies/{company_id}/tables",
+    response_model=list[schemas.PublicTableResponse],
+)
+def read_public_tables(company_id: str, db: Session = Depends(get_db)):
+    return crud.get_tables_by_company(db, company_id)
+
+@app.get(
+    "/public/tables/{table_id}",
+    response_model=schemas.PublicTableResponse,
+)
+def read_public_table(table_id: str, db: Session = Depends(get_db)):
+    return crud.get_table(db, table_id)
 
 # =====================
 # BIDLIST API
@@ -1565,6 +1571,20 @@ def read_reservations_by_table(
         raise HTTPException(status_code=403, detail="Permission Denied")
 
     db_reservations = crud.get_reservations_by_table(db, table_id)
+    return db_reservations
+
+@app.get(
+    "/public/tables/{table_id}/reservations", response_model=list[schemas.PublicReservationResponse]
+)
+def read_reservations_by_table_public(
+    table_id: str,
+    db: Session = Depends(get_db),
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+
+    db_reservations = crud.get_reservations_by_table(db, table_id) 
     return db_reservations
 
 
