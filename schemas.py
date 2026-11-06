@@ -60,13 +60,16 @@ class PublicTableResponse(BaseModel):
     tablename: str
     section: str
     status: str
-    least_bid_price: int
     has_reservations: bool
     is_reserved: bool
     bid_available: bool
-    bid_end_at: Optional[datetime]
-    offer_products: Optional[str]
-    
+    registered_at: Optional[datetime]
+    reserved_at: Optional[datetime]
+    bid_end_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # =========================
 # USER
 # =========================
