@@ -780,48 +780,17 @@ def create_table(table: schemas.TableCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/tables/{table_id}", response_model=schemas.TableResponse)
-def read_table(
-    table_id: str,
-    firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db),
-):
-    db_table = crud.get_table(db, table_id)
-    if db_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    user_id = firebase_claims["uid"]
-    db_user = crud.get_user(db, user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    is_company_staff = (
-        db_user.company_id == db_table.company_id
-        and db_user.role in {"owner", "admin", "user"}
-    )
-    if not is_company_staff:
-        raise HTTPException(status_code=403, detail="Permission Denied")
+def read_table(table_id: str, db: Session = Depends(get_db)):
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
     return db_table
 
-#직원용
+
 @app.get("/companies/{company_id}/tables", response_model=list[schemas.TableResponse])
 def read_tables_by_company(
-    company_id: str,
-    section: Optional[str] = None,
-    firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db),
+    company_id: str, section: Optional[str] = None, db: Session = Depends(get_db)
 ):
-    user_id = firebase_claims["uid"]
-    db_user = crud.get_user(db, user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    is_company_staff = (
-        db_user.company_id == company_id
-        and db_user.role in {"owner", "admin", "user"}
-    )
-    if not is_company_staff:
-        raise HTTPException(status_code=403, detail="Permission Denied")
-    
     if section is not None:
         return crud.get_tables_by_company_and_section(db, company_id, section)
     return crud.get_tables_by_company(db, company_id)
@@ -1558,11 +1527,6 @@ def read_reservations_by_table(
     db_user = crud.get_user(db, current_user_id)
     if db_user is None:
         raise HTTPException(status_code=403, detail="User not found")
-    if (
-        db_user.role not in {"owner", "admin", "user"}
-        or db_user.company_id != db_table.company_id
-    ):
-        raise HTTPException(status_code=403, detail="Permission Denied")
 
     db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
