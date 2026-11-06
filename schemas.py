@@ -489,6 +489,13 @@ class ReservationResponse(ReservationBase):
     class Config:
         from_attributes = True
 
+class PublicReservationResponse(BaseModel):
+    id: int
+    table_id: str
+    reservation_time: datetime
+    bid_price: int
+    is_fixed: bool
+    fixed_at: datetime
 
 class ReservationBidResponse(BaseModel):
     id: int
