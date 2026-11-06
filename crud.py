@@ -1464,13 +1464,10 @@ def no_show(db: Session, reservation_id: int, user: User):
 
     reservation_user = (
         db.query(User)
-        .filter(
-            User.phonenumber == db_reservation.customer_phone,
-            User.role == "customer",
-        )
+        .filter(User.phonenumber == db_reservation.customer_phone)
         .first()
     )
-    if reservation_user is not None:
+    if reservation_user is not None and reservation_user.role == "customer":
         reservation_user.no_show += 1
 
     bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
