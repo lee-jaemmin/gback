@@ -1199,14 +1199,16 @@ def register_reservation(
         if not user.phone_verified:
             return "PHONE VERIFICATION NEEDED"
         count = (
-            db.query(Reservation).filter(Reservation.created_by_id == user.id).count()
+            db.query(Reservation)
+            .filter(Reservation.customer_phone == user.phonenumber)
+            .count()
         )
         if count >= 3:
             return "TOO MANY RESERVATIONS"
         existed_reservation = (
             db.query(Reservation)
             .filter(
-                Reservation.created_by_id == user.id,
+                Reservation.customer_phone == user.phonenumber,
                 Reservation.table_id == db_table.id,
             )
             .first()
@@ -1222,10 +1224,13 @@ def register_reservation(
         table_id=table_id,
         reservation_time=reservation_input.reservation_time,
         customer_name=reservation_input.customer_name,
-        customer_phone=reservation_input.customer_phone,
+        customer_phone=(
+            user.phonenumber
+            if user.role == "customer"
+            else reservation_input.customer_phone
+        ),
         bid_price=reservation_input.bid_price,  # 가격만 입력 시
         is_fixed=reservation_input.is_fixed,
-        created_by_id=user.id,
     )
     db_table.has_reservations = True
     db.add(db_reservation)
@@ -1268,11 +1273,11 @@ def get_reservation(
     return db.query(Reservation).filter(Reservation.id == reservation_id).first()
 
 
-def reservation_under(db: Session, user_id: str):
+def reservation_under(db: Session, customer_phone: str | None):
     return (
         db.query(Reservation)
         .filter(
-            Reservation.created_by_id == user_id,
+            Reservation.customer_phone == customer_phone,
             Reservation.is_fixed.is_(True),
             Reservation.arrival_at.is_(None),
         )
@@ -1457,12 +1462,16 @@ def no_show(db: Session, reservation_id: int, user: User):
     if not is_company_staff:
         return "PERMISSION DENIED"
 
-    ## 이번에는 손님이 직접 생성한 예약인지 직원이 생성한 예약인지 확인 후 예약 삭제
-    reservation_created_by = get_user(db, db_reservation.created_by_id)
-    if reservation_created_by is None:
-        return "CREATED USER NOT FOUND"
-    if reservation_created_by.role == "customer":
-        reservation_created_by.no_show += 1
+    reservation_user = (
+        db.query(User)
+        .filter(
+            User.phonenumber == db_reservation.customer_phone,
+            User.role == "customer",
+        )
+        .first()
+    )
+    if reservation_user is not None:
+        reservation_user.no_show += 1
 
     bid_history = db.query(BidHistory).filter(BidHistory.reservation_id == db_reservation.id).first()
     if bid_history is not None:

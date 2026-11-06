@@ -11,7 +11,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from websocket_manager import manager
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 from typing import List
 import models
 import crud
@@ -1116,12 +1115,7 @@ def get_my_bids(
 
     mybids = (
         db.query(models.Reservation)
-        .filter(
-            or_(
-                models.Reservation.created_by_id == user_id,
-                models.Reservation.customer_phone == db_user.phonenumber,
-            )
-        )
+        .filter(models.Reservation.customer_phone == db_user.phonenumber)
         .all()
     )
 
@@ -1537,7 +1531,7 @@ def read_reservation(
     if db_user is None:
         raise HTTPException(status_code=403, detail="User not found")
 
-    is_oneself = db_reservation.created_by_id == current_user_id
+    is_oneself = db_reservation.customer_phone == db_user.phonenumber
     is_company_staff = (
         db_user.role in {"owner", "admin", "user"}
         and db_user.company_id == db_reservation.table.company_id
@@ -1615,7 +1609,7 @@ def reservations_under(
     db_user = crud.get_user(db, user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return crud.reservation_under(db, user_id)
+    return crud.reservation_under(db, db_user.phonenumber)
 
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
@@ -1629,11 +1623,6 @@ async def update_reservation(
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservaion not foun")
-    # fixed_at이 none -> not none으로 바뀐 예약에만 알림톡 전송
-    reservation_user = crud.get_user(db, db_reservation.created_by_id)
-    if reservation_user is None:
-        raise HTTPException(status_code=403, detail="Reservation User not found")
-
     db_table = crud.get_table(db, db_reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
@@ -1664,6 +1653,14 @@ async def update_reservation(
     )
 
     updated_reservation, changed_tables, just_fixed, outbid_reservation = result
+    reservation_user = (
+        db.query(models.User)
+        .filter(
+            models.User.phonenumber == updated_reservation.customer_phone,
+            models.User.role == "customer",
+        )
+        .first()
+    )
 
     # 예약이 0개가 된 테이블
     for table in changed_tables:
@@ -1691,7 +1688,7 @@ async def update_reservation(
         {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
     )
 
-    if just_fixed and reservation_user.role == "customer":
+    if just_fixed and reservation_user is not None:
         db_company = crud.get_company(db, db_table.company_id)
         if reservation_user.phonenumber is None:
             print("알림톡 번호 없음.")
@@ -1728,9 +1725,14 @@ async def no_show(
     db_reservation = crud.get_reservation(db, reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    noshow_user = crud.get_user(db, db_reservation.created_by_id)
-    if noshow_user is None:
-        raise HTTPException(status_code=404, detail="no show user not found")
+    noshow_user = (
+        db.query(models.User)
+        .filter(
+            models.User.phonenumber == db_reservation.customer_phone,
+            models.User.role == "customer",
+        )
+        .first()
+    )
     request_user_id = firebase_claims["uid"]
     db_requester = crud.get_user(db, request_user_id)
     if db_requester is None:
@@ -1742,7 +1744,7 @@ async def no_show(
         raise HTTPException(status_code=409, detail="Not a fixed Reservation")
     if result == "TABLE NOT FOUND":
         raise HTTPException(status_code=404, detail="Table not found")
-    if result == "REQUEST USER NOT FOUND" or result == "CREATED USER NOT FOUND":
+    if result == "REQUEST USER NOT FOUND":
         raise HTTPException(status_code=404, detail="User not found")
     if result == "PERMISSION DENIED":
         raise HTTPException(status_code=403, detail="Permission Denied")
@@ -1758,7 +1760,7 @@ async def no_show(
         table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": table.id}},
     )
-    if noshow_user.role == "customer":
+    if noshow_user is not None:
         db_company = crud.get_company(db, company_id)
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,
@@ -1782,9 +1784,6 @@ async def delete_reservation(
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
     was_fixed = db_reservation.is_fixed
-    reservation_user = crud.get_user(db, db_reservation.created_by_id)
-    if reservation_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
     company_id = db_reservation.table.company_id
 
     result = crud.delete_reservation(db, reservation_id, current_user_id)

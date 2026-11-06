@@ -478,7 +478,6 @@ class ReservationUpdate(BaseModel):
 class ReservationResponse(ReservationBase):
     id: int
     table_id: str
-    created_by_id: str
 
     created_at: datetime
     updated_at: datetime
