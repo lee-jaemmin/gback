@@ -365,20 +365,8 @@ def upload_company_floor_plan(
 )
 def get_company_floor_image_url(
     company_id: str,
-    firebase_claims: dict = Depends(get_verified_firebase_claims),
     db: Session = Depends(get_db),
 ):
-    user_id = firebase_claims.get("uid")
-    db_user = crud.get_user(db, user_id) if user_id else None
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if db_user.role == "customer":
-        pass
-    elif db_user.role in {"owner", "admin", "user"}:
-        if db_user.company_id != company_id:
-            raise HTTPException(status_code=403, detail="Company Access Denied")
-    else:
-        raise HTTPException(status_code=403, detail="Permission Denied")
     db_company = crud.get_company(db, company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
