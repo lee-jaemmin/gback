@@ -54,6 +54,8 @@ class ChangeSection(BaseModel):
     old_name: str
     new_name: str
 
+
+
 # =========================
 # USER
 # =========================
@@ -171,6 +173,24 @@ class TableResponse(TableBase):
     user_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PublicTableResponse(BaseModel):
+    id: str
+    company_id: str
+    tablename: str
+    section: str
+    status: str
+    has_reservations: bool
+    is_reserved: bool
+    bid_available: bool
+    registered_at: Optional[datetime]
+    reserved_at: Optional[datetime]
+    bid_end_at: datetime
+    least_bid_price: Optional[int]
+    offer_products: Optional[str]
 
     class Config:
         from_attributes = True
@@ -458,7 +478,6 @@ class ReservationUpdate(BaseModel):
 class ReservationResponse(ReservationBase):
     id: int
     table_id: str
-    created_by_id: str
 
     created_at: datetime
     updated_at: datetime
@@ -469,6 +488,13 @@ class ReservationResponse(ReservationBase):
     class Config:
         from_attributes = True
 
+class PublicReservationResponse(BaseModel):
+    id: int
+    table_id: str
+    reservation_time: datetime
+    bid_price: int
+    is_fixed: bool
+    fixed_at: datetime
 
 class ReservationBidResponse(BaseModel):
     id: int

@@ -24,6 +24,11 @@ def send_alimtalk(
     FastAPI에서는 BackgroundTasks.add_task로 호출한다.
     타임아웃은 접수 여부가 불명확하므로 중복 발송 방지를 위해 재시도하지 않는다.
     """
+    app_env = os.getenv("APP_ENV", "local")
+    if app_env != "production":
+        logger.info("알림톡 발송 건너뜀: %s 환경", app_env)
+        return {"success": False, "reason": "disabled"}
+
     api_key = os.getenv("SOLAPI_KEY", "").strip()
     api_secret = os.getenv("SOLAPI_SECRET", "").strip()
     if not api_key or not api_secret:

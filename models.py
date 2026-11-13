@@ -292,7 +292,6 @@ class Reservation(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     table_id = Column(String, ForeignKey("table_master.id"), nullable=False)
-    created_by_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
 
     reservation_time = Column(DateTime(timezone=True), nullable=True)
     bid_price = Column(Integer, default=0, nullable=True)
