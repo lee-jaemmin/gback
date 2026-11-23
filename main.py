@@ -1,4 +1,4 @@
-from fastapi import ( 
+from fastapi import (
     BackgroundTasks,
     Depends,
     FastAPI,
@@ -1004,6 +1004,7 @@ async def allow_all_bids(
     db.commit()
     return {"message": "all top bid allowed"}
 
+
 # 공개 테이블
 @app.get(
     "/public/companies/{company_id}/tables",
@@ -1012,12 +1013,14 @@ async def allow_all_bids(
 def read_public_tables(company_id: str, db: Session = Depends(get_db)):
     return crud.get_tables_by_company(db, company_id)
 
+
 @app.get(
     "/public/tables/{table_id}",
     response_model=schemas.PublicTableResponse,
 )
 def read_public_table(table_id: str, db: Session = Depends(get_db)):
     return crud.get_table(db, table_id)
+
 
 # =====================
 # BIDLIST API
@@ -1501,7 +1504,7 @@ def read_reservation(
 
 @app.get(
     "/tables/{table_id}/reservations", response_model=list[schemas.ReservationResponse]
-) #직원용
+)  # 직원용
 def read_reservations_by_table(
     table_id: str,
     firebase_claims: dict = Depends(get_verified_firebase_claims),
@@ -1519,8 +1522,10 @@ def read_reservations_by_table(
     db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
 
+
 @app.get(
-    "/public/tables/{table_id}/reservations", response_model=list[schemas.PublicReservationResponse]
+    "/public/tables/{table_id}/reservations",
+    response_model=list[schemas.PublicReservationResponse],
 )
 def read_reservations_by_table_public(
     table_id: str,
@@ -1530,7 +1535,7 @@ def read_reservations_by_table_public(
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
-    db_reservations = crud.get_reservations_by_table(db, table_id) 
+    db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
 
 
@@ -1563,6 +1568,7 @@ def reservations_under(
         raise HTTPException(status_code=404, detail="User not found")
     return crud.reservation_under(db, db_user.phonenumber)
 
+
 @app.patch("/customer-reservation-move")
 async def customer_reservation_move(
     customer_reservation_move: schemas.CustomerReservationMoveUpdate,
@@ -1583,16 +1589,24 @@ async def customer_reservation_move(
     requester = crud.get_user(db, requester_id)
     if requester is None:
         raise HTTPException(status_code=403, detail="User not found")
-    is_oneself = db_reservation.customer_phone == requester.phonenumber 
+    is_oneself = db_reservation.customer_phone == requester.phonenumber
     if not is_oneself:
         raise HTTPException(status_code=409, detail="Permission Denied")
-    db_reservation.table_id = customer_reservation_move.to_table_id # 테이블 이동
-    reservations_left = crud.get_reservations_by_table(db, db_from_table.id) # 기존 테이블 예약 남았나 체크
+    db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
+    reservations_left = crud.get_reservations_by_table(
+        db, db_from_table.id
+    )  # 기존 테이블 예약 남았나 체크
     if not reservations_left:
         db_from_table.has_reservations = False
     db_to_table.has_reservations = True
 
-    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(mode="json")
+    db.commit()
+    db.refresh(db_from_table)
+    db.refresh(db_to_table)
+
+    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(
+        mode="json"
+    )
     background_tasks.add_task(
         manager.broadcast,
         db_from_table.company_id,
@@ -1602,7 +1616,7 @@ async def customer_reservation_move(
         },
     )
 
-    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(mode="json")
+    payload = schemas.TableResponse.model_validate(db_to_table).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast,
         db_to_table.company_id,
@@ -1617,6 +1631,12 @@ async def customer_reservation_move(
         db_from_table.company_id,
         {"type": "reservation_updated", "payload": {"table_id": db_from_table.id}},
     )
+    background_tasks.add_task(
+        manager.broadcast,
+        db_from_table.company_id,
+        {"type": "reservation_updated", "payload": {"table_id": db_to_table.id}},
+    )
+
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
