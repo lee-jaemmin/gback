@@ -516,6 +516,11 @@ class MyBidResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CustomerReservationMoveUpdate(BaseModel):
+    reservation_id: int
+    from_table_id: str
+    to_table_id: str
+
 
 # =========================
 # RESERVATIONPURCHASE
