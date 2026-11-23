@@ -755,30 +755,72 @@ def change_role(
 # =====================
 # TABLE API
 # =====================
-
-
 @app.post("/tables", response_model=schemas.TableResponse)
-def create_table(table: schemas.TableCreate, db: Session = Depends(get_db)):
+def create_table(
+    table: schemas.TableCreate,
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+):
     db_company = crud.get_company(db, table.company_id)
-    # db_group = crud.get_gr
-
     if db_company is None:
         raise HTTPException(status_code=404, detail="Company not found")
+
+    uid = firebase_claims["uid"]
+    db_user = crud.get_user(db, uid)
+    if db_user is not None:
+        raise HTTPException(status_code=404, detail="User not found")
+    is_company_staff = db_user.company_id == db_company.id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
+    if not is_company_staff:
+        raise HTTPException(status_code=409, detail="Permission denied")
     return crud.create_table(db, table)
 
 
 @app.get("/tables/{table_id}", response_model=schemas.TableResponse)
-def read_table(table_id: str, db: Session = Depends(get_db)):
+def read_table(
+    table_id: str,
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+):
+    uid = firebase_claims["uid"]
     db_table = crud.get_table(db, table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    db_user = crud.get_user(db, uid)
+    if db_user is not None:
+        raise HTTPException(status_code=404, detail="User not found")
+    is_company_staff = db_user.company_id == db_table.company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
+    if not is_company_staff:
+        raise HTTPException(status_code=409, detail="Permission denied")
+
     return db_table
 
 
 @app.get("/companies/{company_id}/tables", response_model=list[schemas.TableResponse])
 def read_tables_by_company(
-    company_id: str, section: Optional[str] = None, db: Session = Depends(get_db)
+    company_id: str,
+    section: Optional[str] = None,
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
 ):
+    uid = firebase_claims["uid"]
+    db_user = crud.get_user(db, uid)
+    if db_user is not None:
+        raise HTTPException(status_code=404, detail="User not found")
+    is_company_staff = db_user.company_id == company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
+    if not is_company_staff:
+        raise HTTPException(status_code=409, detail="Permission denied")
     if section is not None:
         return crud.get_tables_by_company_and_section(db, company_id, section)
     return crud.get_tables_by_company(db, company_id)
@@ -830,10 +872,25 @@ async def update_table(
 
 
 @app.delete("/tables/{table_id}")
-def delete_table(table_id: str, db: Session = Depends(get_db)):
+def delete_table(
+    table_id: str,
+    db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+):
+    user_id = firebase_claims["uid"]
+    db_user = crud.get_user(db, user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
     db_table = crud.delete_table(db, table_id)
     if db_table is False:
         raise HTTPException(status_code=404, detail="Table not found")
+    is_company_staff = db_user.company_id == db_table.company_id and db_user.role in {
+        "owner",
+        "admin",
+        "user",
+    }
+    if not is_company_staff:
+        raise HTTPException(status_code=409, detail="Permission Denied")
     return {"message": "Table deleted successfully"}
 
 
@@ -1593,7 +1650,7 @@ async def customer_reservation_move(
     if not is_oneself:
         raise HTTPException(status_code=409, detail="Permission Denied")
     db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
-    db.flush() # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
+    db.flush()  # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
     reservations_left = crud.get_reservations_by_table(
         db, db_from_table.id
     )  # 기존 테이블 예약 남았나 체크
@@ -2149,7 +2206,13 @@ async def move_table(
     to_table_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
 ):
+    uid = firebase_claims["uid"]
+    db_user = crud.get_user(db, uid)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="USER NOT FOUND")
+
     db_from_table = crud.get_table(db, from_table_id)
     if db_from_table is None:
         raise HTTPException(status_code=404, detail="FROM TABLE NOT FOUND")
@@ -2161,6 +2224,13 @@ async def move_table(
     db_company = crud.get_company(db, db_from_table.company_id)
     if db_company is None:
         raise HTTPException(status_code=404, detail="COMPANY NOT FOUND")
+    is_company_staff = (
+        db_user.role in {"owner", "admin", "user"}
+        and db_user.company_id == db_company.id
+    )
+
+    if not is_company_staff:
+        raise HTTPException(status_code=409, detail="PERMISSION DENIED")
 
     result = crud.moveTable(db, from_table_id, to_table_id)
     if result == "FROM TABLE NOT USING":
