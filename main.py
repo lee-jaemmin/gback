@@ -1593,7 +1593,7 @@ async def customer_reservation_move(
     if not is_oneself:
         raise HTTPException(status_code=409, detail="Permission Denied")
     db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
-    db.flush()
+    db.flush() # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
     reservations_left = crud.get_reservations_by_table(
         db, db_from_table.id
     )  # 기존 테이블 예약 남았나 체크
