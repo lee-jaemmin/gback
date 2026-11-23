@@ -1616,6 +1616,7 @@ async def update_reservation(
 
     # 예약이 0개가 된 테이블
     for table in changed_tables:
+        table.has_reservation=False
         payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
         background_tasks.add_task(
             manager.broadcast,
