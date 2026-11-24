@@ -870,7 +870,7 @@ async def update_table(
     )
     background_tasks.add_task(
         manager.broadcast,
-        f"customer: {company_id}",
+        f"customer:{company_id}",
         {
             "type": "table_updated",
             "payload": customer_payload,
@@ -1036,7 +1036,7 @@ async def allow_all_bids(
         )
         background_tasks.add_task(
             manager.broadcast,
-            f"customer: {company_id}",
+            f"customer:{company_id}",
             {
                 "type": "table_updated",
                 "payload": customer_payload,
@@ -1053,7 +1053,7 @@ async def allow_all_bids(
                 mode="json"
             )
             customer_payload = schemas.CustomerTableResponse.model_validate(
-                table
+                changed_table
             ).model_dump(mode="json")
             background_tasks.add_task(
                 manager.broadcast,
@@ -1065,7 +1065,7 @@ async def allow_all_bids(
             )
             background_tasks.add_task(
                 manager.broadcast,
-                f"customer: {company_id}",
+                f"customer:{company_id}",
                 {
                     "type": "table_updated",
                     "payload": customer_payload,
