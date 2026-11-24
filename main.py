@@ -1542,6 +1542,9 @@ async def register_reservation(
     table_payload = schemas.TableResponse.model_validate(db_table).model_dump(
         mode="json"
     )
+    table_customer_payload = schemas.CustomerTableResponse.model_validate(db_table).model_dump(
+            mode="json"
+    )
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
@@ -1550,6 +1553,14 @@ async def register_reservation(
             "payload": table_payload,
         },
     )
+    background_tasks.add_task(
+            manager.broadcast,
+            f"{db_table.company_id}",
+            {
+                "type": "table_updated",
+                "payload": table_customer_payload,
+            },
+        )
     background_tasks.add_task(
         manager.broadcast,
         db_table.company_id,
@@ -1684,6 +1695,15 @@ async def update_reservation(
             "payload": payload,
         },
     )
+    customer_payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        f"{db_table.company_id}",
+        {
+            "type": "table_updated",
+            "payload": customer_payload,
+        },
+    )
 
     updated_reservation, changed_tables, just_fixed, outbid_reservation = result
     reservation_user = (
@@ -1704,6 +1724,15 @@ async def update_reservation(
             {
                 "type": "table_updated",
                 "payload": payload,
+            },
+        )
+        customer_payload = schemas.CustomerTableResponse.model_validate(table).model_dump(mode="json")
+        background_tasks.add_task(
+            manager.broadcast,
+            f"{table.company_id}",
+            {
+                "type": "table_updated",
+                "payload": customer_payload,
             },
         )
         background_tasks.add_task(
@@ -1883,76 +1912,6 @@ def read_reservations_by_table_public(
     return db_reservations
 
 
-@app.patch("/customer-reservation-move")
-async def customer_reservation_move(
-    customer_reservation_move: schemas.CustomerReservationMoveUpdate,
-    background_tasks: BackgroundTasks,
-    firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db),
-):
-    db_reservation = crud.get_reservation(db, customer_reservation_move.reservation_id)
-    if db_reservation is None:
-        raise HTTPException(status_code=404, detail="Reservaion not foun")
-    db_from_table = crud.get_table(db, db_reservation.table_id)
-    if db_from_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    db_to_table = crud.get_table(db, customer_reservation_move.to_table_id)
-    if db_to_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    requester_id = firebase_claims["uid"]
-    requester = crud.get_user(db, requester_id)
-    if requester is None:
-        raise HTTPException(status_code=403, detail="User not found")
-    is_oneself = db_reservation.customer_phone == requester.phonenumber
-    if not is_oneself:
-        raise HTTPException(status_code=409, detail="Permission Denied")
-    db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
-    db.flush()  # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
-    reservations_left = crud.get_reservations_by_table(
-        db, db_from_table.id
-    )  # 기존 테이블 예약 남았나 체크
-    if not reservations_left:
-        db_from_table.has_reservations = False
-    db_to_table.has_reservations = True
-
-    db.commit()
-    db.refresh(db_from_table)
-    db.refresh(db_to_table)
-
-    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(
-        mode="json"
-    )
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-
-    payload = schemas.TableResponse.model_validate(db_to_table).model_dump(mode="json")
-    background_tasks.add_task(
-        manager.broadcast,
-        db_to_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_from_table.id}},
-    )
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_to_table.id}},
-    )
-
-
 @app.patch(
     "/customer/modify-reservations/", response_model=schemas.CustomerReservationResponse
 )
@@ -1965,8 +1924,8 @@ async def customer_update_reservation(
     db_reservation = crud.get_reservation(db, reservation_update.reservation_id)
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservaion not foun")
-    db_table = crud.get_table(db, db_reservation.table_id)
-    if db_table is None:
+    db_from_table = crud.get_table(db, db_reservation.table_id)
+    if db_from_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
 
     requester_id = firebase_claims["uid"]
@@ -1977,86 +1936,114 @@ async def customer_update_reservation(
     if requester.phonenumber != db_reservation.customer_phone:
         raise HTTPException(status_code=403, detail="Permission Denied")
 
-    if reservation_update.table_id is not None:
-        db_reservation.table_id = reservation_update.table_id
+    db_to_table = db_from_table
+    table_changed = (
+        reservation_update.table_id is not None
+        and reservation_update.table_id != db_from_table.id
+    )
+    if table_changed:
+        db_to_table = crud.get_table(db, reservation_update.table_id)
+        if db_to_table is None:
+            raise HTTPException(status_code=404, detail="Table not found")
+        if db_to_table.company_id != db_from_table.company_id:
+            raise HTTPException(status_code=403, detail="Company access denied")
+
     if reservation_update.reservation_time is not None:
-        if db_reservation.reservation_time <= datetime.now(UTC) + timedelta(hours=2):
+        if (
+            db_reservation.reservation_time is not None
+            and db_reservation.reservation_time
+            <= datetime.now(UTC) + timedelta(hours=2)
+        ):
             raise HTTPException(status_code=409, detail="Reservation can't be modified")
-        else:
-            db_reservation.reservation_time = reservation_update.reservation_time
+        db_reservation.reservation_time = reservation_update.reservation_time
 
-    # 확정된 테이블
-    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
-    background_tasks.add_task(
-        manager.broadcast,
-        db_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-
-    updated_reservation, changed_tables, just_fixed, outbid_reservation = result
-    reservation_user = (
-        db.query(models.User)
-        .filter(
-            models.User.phonenumber == updated_reservation.customer_phone,
-            models.User.role == "customer",
+    outbid_reservation = None
+    if reservation_update.bid_price is not None:
+        top_reservation = (
+            db.query(models.Reservation)
+            .filter(
+                models.Reservation.table_id == db_to_table.id,
+                models.Reservation.id != db_reservation.id,
+            )
+            .order_by(
+                models.Reservation.bid_price.desc().nulls_last(),
+                models.Reservation.id.asc(),
+            )
+            .first()
         )
-        .first()
-    )
+        if (
+            top_reservation is not None
+            and reservation_update.bid_price > (db_reservation.bid_price or 0)
+            and reservation_update.bid_price > (top_reservation.bid_price or 0)
+        ):
+            outbid_reservation = top_reservation
+        db_reservation.bid_price = reservation_update.bid_price
 
-    # 예약이 0개가 된 테이블
-    for table in changed_tables:
-        payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
-        background_tasks.add_task(
-            manager.broadcast,
-            table.company_id,
-            {
-                "type": "table_updated",
-                "payload": payload,
-            },
-        )
-        background_tasks.add_task(
-            manager.broadcast,
-            table.company_id,
-            {
-                "type": "reservation_updated",
-                "payload": {"table_id": table.id},
-            },
-        )
+    if table_changed:
+        db_reservation.table_id = db_to_table.id
+        db.flush()
+        reservations_left = crud.get_reservations_by_table(db, db_from_table.id)
+        db_from_table.has_reservations = bool(reservations_left)
+        db_to_table.has_reservations = True
 
-    background_tasks.add_task(
-        manager.broadcast,
-        db_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
-    )
+    db.commit()
+    db.refresh(db_reservation)
 
-    if just_fixed and reservation_user is not None:
-        db_company = crud.get_company(db, db_table.company_id)
-        if reservation_user.phonenumber is None:
-            print("알림톡 번호 없음.")
-        else:
+    if table_changed:
+        db.refresh(db_from_table)
+        db.refresh(db_to_table)
+
+        for table in (db_from_table, db_to_table):
+            payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+            customer_payload = schemas.CustomerTableResponse.model_validate(
+                table
+            ).model_dump(mode="json")
             background_tasks.add_task(
-                solapi_alimtalk.send_alimtalk,
-                reservation_user.phonenumber,
-                "KA01TP260918001413298TOpXYrgbaAL",
-                "KA01PF260917045443138PqRAzw6E07o",
+                manager.broadcast,
+                table.company_id,
                 {
-                    "#{매장명}": db_company.name,
-                    "#{테이블이름}": db_table.tablename,
+                    "type": "table_updated",
+                    "payload": payload,
                 },
             )
+            background_tasks.add_task(
+                manager.broadcast,
+                f"customer:{table.company_id}",
+                {
+                    "type": "table_updated",
+                    "payload": customer_payload,
+                },
+            )
+
+    updated_table_ids = {db_from_table.id, db_to_table.id}
+    for updated_table_id in updated_table_ids:
+        background_tasks.add_task(
+            manager.broadcast,
+            db_from_table.company_id,
+            {
+                "type": "reservation_updated",
+                "payload": {"table_id": updated_table_id},
+            },
+        )
+        background_tasks.add_task(
+            manager.broadcast,
+            f"customer:{db_from_table.company_id}",
+            {
+                "type": "reservation_updated",
+                "payload": {"table_id": updated_table_id},
+            },
+        )
+
     if outbid_reservation is not None:
-        db_company = crud.get_company(db, db_table.company_id)
+        db_company = crud.get_company(db, db_to_table.company_id)
         background_tasks.add_task(
             solapi_alimtalk.send_alimtalk,
             outbid_reservation.customer_phone,
             "KA01TP261030063106160YcMUXm3SyIL",
             "KA01PF260917045443138PqRAzw6E07o",
-            {"#{매장명}": db_company.name, "#{테이블이름}": db_table.tablename},
+            {"#{매장명}": db_company.name, "#{테이블이름}": db_to_table.tablename},
         )
-    return updated_reservation
+    return db_reservation
 
 
 # =====================
@@ -2163,9 +2150,28 @@ async def reservation_check_in(
             "payload": payload,
         },
     )
+    customer_payload = schemas.CustomerTableResponse.model_validate(
+        db_table
+    ).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{db_reservation.table.company_id}",
+        {
+            "type": "table_updated",
+            "payload": customer_payload,
+        },
+    )
     background_tasks.add_task(
         manager.broadcast,
         db_reservation.table.company_id,
+        {
+            "type": "reservation_updated",
+            "payload": {"table_id": db_table.id},
+        },
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{db_reservation.table.company_id}",
         {
             "type": "reservation_updated",
             "payload": {"table_id": db_table.id},
@@ -2359,6 +2365,17 @@ async def reregister_history(
             {
                 "type": "table_updated",
                 "payload": payload,
+            },
+        )
+        customer_payload = schemas.CustomerTableResponse.model_validate(
+            db_table
+        ).model_dump(mode="json")
+        background_tasks.add_task(
+            manager.broadcast,
+            f"customer:{db_table.company_id}",
+            {
+                "type": "table_updated",
+                "payload": customer_payload,
             },
         )
         return {"message": "ReRegistered successfully"}

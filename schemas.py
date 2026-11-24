@@ -498,11 +498,14 @@ class CustomerReservationUpdate(BaseModel):
 class CustomerReservationResponse(BaseModel):
     id: int
     table_id: str
-    reservation_time: datetime
-    bid_price: int
+    reservation_time: Optional[datetime] = None
+    bid_price: Optional[int] = None
     is_fixed: bool
-    fixed_at: datetime
-    arrival_at: datetime
+    fixed_at: Optional[datetime] = None
+    arrival_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 class ReservationBidResponse(BaseModel):
     id: int
@@ -523,12 +526,6 @@ class MyBidResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-class CustomerReservationMoveUpdate(BaseModel):
-    reservation_id: int
-    from_table_id: str
-    to_table_id: str
-
 
 # =========================
 # RESERVATIONPURCHASE
