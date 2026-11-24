@@ -1020,6 +1020,21 @@ async def allow_all_bids(
         table.total_price = table.base_price
         top_bid.fixed_at = datetime.now(UTC)
         top_bid.fixed_by = db_user.id
+        reservations_to_delete = (
+            db.query(models.Reservation)
+            .filter(
+                models.Reservation.customer_phone == top_bid.customer_phone,
+                models.Reservation.id != top_bid.id,
+            )
+            .all()
+        )
+        for deleted_reservation in reservations_to_delete:
+            add_reservation_websocket_tasks(
+                background_tasks,
+                deleted_reservation.table.company_id,
+                deleted_reservation,
+                event_type="reservation_deleted",
+            )
         changed_tables = crud.delete_fixed_users_reservations(db, top_bid)
 
         payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
@@ -1042,10 +1057,10 @@ async def allow_all_bids(
                 "payload": customer_payload,
             },
         )
-        background_tasks.add_task(
-            manager.broadcast,
+        add_reservation_websocket_tasks(
+            background_tasks,
             table.company_id,
-            {"type": "reservation_updated", "payload": {"table_id": table.id}},
+            top_bid,
         )
 
         for changed_table in changed_tables:
@@ -1072,14 +1087,6 @@ async def allow_all_bids(
                 },
             )
 
-            background_tasks.add_task(
-                manager.broadcast,
-                changed_table.company_id,
-                {
-                    "type": "reservation_updated",
-                    "payload": {"table_id": changed_table.id},
-                },
-            )
         if not top_bid.customer_phone:
             print("알림톡 번호 없음.")
         else:
@@ -1502,6 +1509,46 @@ def delete_log_and_purchase(
 # =====================
 # RESERVATION API
 # =====================
+def add_reservation_websocket_tasks(
+    background_tasks: BackgroundTasks,
+    company_id: str,
+    reservation: models.Reservation,
+    event_type: str = "reservation_updated",
+):
+    staff_payload = schemas.ReservationResponse.model_validate(reservation).model_dump(
+        mode="json"
+    )
+    customer_payload = schemas.CustomerReservationResponse.model_validate(
+        reservation
+    ).model_dump(mode="json")
+    add_reservation_payload_websocket_tasks(
+        background_tasks,
+        company_id,
+        staff_payload,
+        customer_payload,
+        event_type,
+    )
+
+
+def add_reservation_payload_websocket_tasks(
+    background_tasks: BackgroundTasks,
+    company_id: str,
+    staff_payload: dict,
+    customer_payload: dict,
+    event_type: str,
+):
+    background_tasks.add_task(
+        manager.broadcast,
+        company_id,
+        {"type": event_type, "payload": staff_payload},
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{company_id}",
+        {"type": event_type, "payload": customer_payload},
+    )
+
+
 @app.post(
     "/tables/{table_id}/register-reservation",
     response_model=schemas.ReservationResponse,
@@ -1555,16 +1602,16 @@ async def register_reservation(
     )
     background_tasks.add_task(
             manager.broadcast,
-            f"{db_table.company_id}",
+            f"customer:{db_table.company_id}",
             {
                 "type": "table_updated",
                 "payload": table_customer_payload,
             },
         )
-    background_tasks.add_task(
-        manager.broadcast,
+    add_reservation_websocket_tasks(
+        background_tasks,
         db_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
+        reservation,
     )
 
     if outbid_reservation is not None:
@@ -1670,11 +1717,41 @@ async def update_reservation(
     db_table = crud.get_table(db, db_reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
+    previous_table_id = db_reservation.table_id
+    previous_staff_payload = schemas.ReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
+    previous_customer_payload = schemas.CustomerReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
 
     requester_id = firebase_claims["uid"]
     requester = crud.get_user(db, requester_id)
     if requester is None:
         raise HTTPException(status_code=403, detail="User not found")
+
+    reservations_to_delete = []
+    if reservation_update.is_fixed is True:
+        delete_targets = (
+            db.query(models.Reservation)
+            .filter(
+                models.Reservation.customer_phone == db_reservation.customer_phone,
+                models.Reservation.id != db_reservation.id,
+            )
+            .all()
+        )
+        reservations_to_delete = [
+            (
+                reservation.table.company_id,
+                schemas.ReservationResponse.model_validate(reservation).model_dump(
+                    mode="json"
+                ),
+                schemas.CustomerReservationResponse.model_validate(
+                    reservation
+                ).model_dump(mode="json"),
+            )
+            for reservation in delete_targets
+        ]
 
     result = crud.update_reservation(
         db, reservation_update, reservation_id, requester_id
@@ -1695,10 +1772,12 @@ async def update_reservation(
             "payload": payload,
         },
     )
-    customer_payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    customer_payload = schemas.CustomerTableResponse.model_validate(db_table).model_dump(
+        mode="json"
+    )
     background_tasks.add_task(
         manager.broadcast,
-        f"{db_table.company_id}",
+        f"customer:{db_table.company_id}",
         {
             "type": "table_updated",
             "payload": customer_payload,
@@ -1729,26 +1808,34 @@ async def update_reservation(
         customer_payload = schemas.CustomerTableResponse.model_validate(table).model_dump(mode="json")
         background_tasks.add_task(
             manager.broadcast,
-            f"{table.company_id}",
+            f"customer:{table.company_id}",
             {
                 "type": "table_updated",
                 "payload": customer_payload,
             },
         )
-        background_tasks.add_task(
-            manager.broadcast,
-            table.company_id,
-            {
-                "type": "reservation_updated",
-                "payload": {"table_id": table.id},
-            },
+    if updated_reservation.table_id != previous_table_id:
+        add_reservation_payload_websocket_tasks(
+            background_tasks,
+            db_table.company_id,
+            previous_staff_payload,
+            previous_customer_payload,
+            "reservation_deleted",
         )
-
-    background_tasks.add_task(
-        manager.broadcast,
+    add_reservation_websocket_tasks(
+        background_tasks,
         db_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
+        updated_reservation,
     )
+    if just_fixed:
+        for company_id, staff_payload, customer_payload in reservations_to_delete:
+            add_reservation_payload_websocket_tasks(
+                background_tasks,
+                company_id,
+                staff_payload,
+                customer_payload,
+                "reservation_deleted",
+            )
 
     if just_fixed and reservation_user is not None:
         db_company = crud.get_company(db, db_table.company_id)
@@ -1800,6 +1887,12 @@ async def no_show(
     if db_requester is None:
         raise HTTPException(status_code=404, detail="requester not found")
     company_id = db_reservation.table.company_id
+    deleted_staff_payload = schemas.ReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
+    deleted_customer_payload = schemas.CustomerReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
     result = crud.no_show(db, reservation_id, db_requester)
 
     if result == "NOT A FIXED RESERVATION":
@@ -1817,10 +1910,12 @@ async def no_show(
     background_tasks.add_task(
         manager.broadcast, company_id, {"type": "table_updated", "payload": payload}
     )
-    background_tasks.add_task(
-        manager.broadcast,
+    add_reservation_payload_websocket_tasks(
+        background_tasks,
         table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": table.id}},
+        deleted_staff_payload,
+        deleted_customer_payload,
+        "reservation_deleted",
     )
     if noshow_user is not None:
         db_company = crud.get_company(db, company_id)
@@ -1847,6 +1942,12 @@ async def delete_reservation(
         raise HTTPException(status_code=404, detail="Reservation not found")
     was_fixed = db_reservation.is_fixed
     company_id = db_reservation.table.company_id
+    deleted_staff_payload = schemas.ReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
+    deleted_customer_payload = schemas.CustomerReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
 
     result = crud.delete_reservation(db, reservation_id, current_user_id)
 
@@ -1872,10 +1973,12 @@ async def delete_reservation(
             "payload": payload,
         },
     )
-    background_tasks.add_task(
-        manager.broadcast,
+    add_reservation_payload_websocket_tasks(
+        background_tasks,
         table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": table.id}},
+        deleted_staff_payload,
+        deleted_customer_payload,
+        "reservation_deleted",
     )
     if was_fixed:
         db_notification = models.Notification(
@@ -1948,6 +2051,16 @@ async def customer_update_reservation(
         if db_to_table.company_id != db_from_table.company_id:
             raise HTTPException(status_code=403, detail="Company access denied")
 
+    previous_staff_payload = None
+    previous_customer_payload = None
+    if table_changed:
+        previous_staff_payload = schemas.ReservationResponse.model_validate(
+            db_reservation
+        ).model_dump(mode="json")
+        previous_customer_payload = schemas.CustomerReservationResponse.model_validate(
+            db_reservation
+        ).model_dump(mode="json")
+
     if reservation_update.reservation_time is not None:
         if (
             db_reservation.reservation_time is not None
@@ -2015,24 +2128,19 @@ async def customer_update_reservation(
                 },
             )
 
-    updated_table_ids = {db_from_table.id, db_to_table.id}
-    for updated_table_id in updated_table_ids:
-        background_tasks.add_task(
-            manager.broadcast,
+    if table_changed:
+        add_reservation_payload_websocket_tasks(
+            background_tasks,
             db_from_table.company_id,
-            {
-                "type": "reservation_updated",
-                "payload": {"table_id": updated_table_id},
-            },
+            previous_staff_payload,
+            previous_customer_payload,
+            "reservation_deleted",
         )
-        background_tasks.add_task(
-            manager.broadcast,
-            f"customer:{db_from_table.company_id}",
-            {
-                "type": "reservation_updated",
-                "payload": {"table_id": updated_table_id},
-            },
-        )
+    add_reservation_websocket_tasks(
+        background_tasks,
+        db_to_table.company_id,
+        db_reservation,
+    )
 
     if outbid_reservation is not None:
         db_company = crud.get_company(db, db_to_table.company_id)
@@ -2136,6 +2244,12 @@ async def reservation_check_in(
     if db_reservation is None:
         raise HTTPException(status_code=404, detail="Reservation not found")
     db_table = crud.get_table(db, db_reservation.table_id)
+    deleted_staff_payload = schemas.ReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
+    deleted_customer_payload = schemas.CustomerReservationResponse.model_validate(
+        db_reservation
+    ).model_dump(mode="json")
     result = crud.reservation_check_in(db, reservation_id)
     if result == "TABLE_NOT_AVAILABLE":
         raise HTTPException(status_code=400, detail="Table is not available")
@@ -2144,7 +2258,7 @@ async def reservation_check_in(
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast,
-        db_reservation.table.company_id,
+        db_table.company_id,
         {
             "type": "table_updated",
             "payload": payload,
@@ -2155,27 +2269,18 @@ async def reservation_check_in(
     ).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast,
-        f"customer:{db_reservation.table.company_id}",
+        f"customer:{db_table.company_id}",
         {
             "type": "table_updated",
             "payload": customer_payload,
         },
     )
-    background_tasks.add_task(
-        manager.broadcast,
-        db_reservation.table.company_id,
-        {
-            "type": "reservation_updated",
-            "payload": {"table_id": db_table.id},
-        },
-    )
-    background_tasks.add_task(
-        manager.broadcast,
-        f"customer:{db_reservation.table.company_id}",
-        {
-            "type": "reservation_updated",
-            "payload": {"table_id": db_table.id},
-        },
+    add_reservation_payload_websocket_tasks(
+        background_tasks,
+        db_table.company_id,
+        deleted_staff_payload,
+        deleted_customer_payload,
+        "reservation_deleted",
     )
     return result
 
