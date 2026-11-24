@@ -1065,7 +1065,7 @@ async def allow_all_bids(
 # 공개 테이블
 @app.get(
     "/public/companies/{company_id}/tables",
-    response_model=list[schemas.PublicTableResponse],
+    response_model=list[schemas.CustomerTableResponse],
 )
 def read_public_tables(company_id: str, db: Session = Depends(get_db)):
     return crud.get_tables_by_company(db, company_id)
@@ -1073,7 +1073,7 @@ def read_public_tables(company_id: str, db: Session = Depends(get_db)):
 
 @app.get(
     "/public/tables/{table_id}",
-    response_model=schemas.PublicTableResponse,
+    response_model=schemas.CustomerTableResponse,
 )
 def read_public_table(table_id: str, db: Session = Depends(get_db)):
     return crud.get_table(db, table_id)
@@ -1580,21 +1580,6 @@ def read_reservations_by_table(
     return db_reservations
 
 
-@app.get(
-    "/public/tables/{table_id}/reservations",
-    response_model=list[schemas.PublicReservationResponse],
-)
-def read_reservations_by_table_public(
-    table_id: str,
-    db: Session = Depends(get_db),
-):
-    db_table = crud.get_table(db, table_id)
-    if db_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-
-    db_reservations = crud.get_reservations_by_table(db, table_id)
-    return db_reservations
-
 
 @app.get(
     "/tables/{table_id}/reservation-bids",
@@ -1624,77 +1609,6 @@ def reservations_under(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return crud.reservation_under(db, db_user.phonenumber)
-
-
-@app.patch("/customer-reservation-move")
-async def customer_reservation_move(
-    customer_reservation_move: schemas.CustomerReservationMoveUpdate,
-    background_tasks: BackgroundTasks,
-    firebase_claims: dict = Depends(get_verified_firebase_claims),
-    db: Session = Depends(get_db),
-):
-    db_reservation = crud.get_reservation(db, customer_reservation_move.reservation_id)
-    if db_reservation is None:
-        raise HTTPException(status_code=404, detail="Reservaion not foun")
-    db_from_table = crud.get_table(db, db_reservation.table_id)
-    if db_from_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    db_to_table = crud.get_table(db, customer_reservation_move.to_table_id)
-    if db_to_table is None:
-        raise HTTPException(status_code=404, detail="Table not found")
-    requester_id = firebase_claims["uid"]
-    requester = crud.get_user(db, requester_id)
-    if requester is None:
-        raise HTTPException(status_code=403, detail="User not found")
-    is_oneself = db_reservation.customer_phone == requester.phonenumber
-    if not is_oneself:
-        raise HTTPException(status_code=409, detail="Permission Denied")
-    db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
-    db.flush()  # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
-    reservations_left = crud.get_reservations_by_table(
-        db, db_from_table.id
-    )  # 기존 테이블 예약 남았나 체크
-    if not reservations_left:
-        db_from_table.has_reservations = False
-    db_to_table.has_reservations = True
-
-    db.commit()
-    db.refresh(db_from_table)
-    db.refresh(db_to_table)
-
-    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(
-        mode="json"
-    )
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-
-    payload = schemas.TableResponse.model_validate(db_to_table).model_dump(mode="json")
-    background_tasks.add_task(
-        manager.broadcast,
-        db_to_table.company_id,
-        {
-            "type": "table_updated",
-            "payload": payload,
-        },
-    )
-
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_from_table.id}},
-    )
-    background_tasks.add_task(
-        manager.broadcast,
-        db_from_table.company_id,
-        {"type": "reservation_updated", "payload": {"table_id": db_to_table.id}},
-    )
-
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
@@ -1916,6 +1830,193 @@ async def delete_reservation(
         )
 
     return {"message": "Reservation deleted successfully"}
+
+# 손님용
+@app.get(
+    "/public/tables/{table_id}/reservations",
+    response_model=list[schemas.CustomerReservationResponse],
+)
+def read_reservations_by_table_public(
+    table_id: str,
+    db: Session = Depends(get_db),
+):
+    db_table = crud.get_table(db, table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    db_reservations = crud.get_reservations_by_table(db, table_id)
+    return db_reservations
+
+@app.patch("/customer-reservation-move")
+async def customer_reservation_move(
+    customer_reservation_move: schemas.CustomerReservationMoveUpdate,
+    background_tasks: BackgroundTasks,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    db_reservation = crud.get_reservation(db, customer_reservation_move.reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservaion not foun")
+    db_from_table = crud.get_table(db, db_reservation.table_id)
+    if db_from_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    db_to_table = crud.get_table(db, customer_reservation_move.to_table_id)
+    if db_to_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    requester_id = firebase_claims["uid"]
+    requester = crud.get_user(db, requester_id)
+    if requester is None:
+        raise HTTPException(status_code=403, detail="User not found")
+    is_oneself = db_reservation.customer_phone == requester.phonenumber
+    if not is_oneself:
+        raise HTTPException(status_code=409, detail="Permission Denied")
+    db_reservation.table_id = customer_reservation_move.to_table_id  # 테이블 이동
+    db.flush()  # 해줘야 바로 밑에 줄에서 체크할 때 최신 정보로 체크됨.
+    reservations_left = crud.get_reservations_by_table(
+        db, db_from_table.id
+    )  # 기존 테이블 예약 남았나 체크
+    if not reservations_left:
+        db_from_table.has_reservations = False
+    db_to_table.has_reservations = True
+
+    db.commit()
+    db.refresh(db_from_table)
+    db.refresh(db_to_table)
+
+    payload = schemas.TableResponse.model_validate(db_from_table).model_dump(
+        mode="json"
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        db_from_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": payload,
+        },
+    )
+
+    payload = schemas.TableResponse.model_validate(db_to_table).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        db_to_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": payload,
+        },
+    )
+
+    background_tasks.add_task(
+        manager.broadcast,
+        db_from_table.company_id,
+        {"type": "reservation_updated", "payload": {"table_id": db_from_table.id}},
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        db_from_table.company_id,
+        {"type": "reservation_updated", "payload": {"table_id": db_to_table.id}},
+    )
+
+@app.patch("/customer/modify-reservations/", response_model=schemas.CustomerReservationResponse)
+async def customer_update_reservation(
+    reservation_update: schemas.CustomerReservationUpdate,
+    background_tasks: BackgroundTasks,
+    firebase_claims: dict = Depends(get_verified_firebase_claims),
+    db: Session = Depends(get_db),
+):
+    db_reservation = crud.get_reservation(db, reservation_update.reservation_id)
+    if db_reservation is None:
+        raise HTTPException(status_code=404, detail="Reservaion not foun")
+    db_table = crud.get_table(db, db_reservation.table_id)
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    
+    requester_id = firebase_claims["uid"]
+    requester = crud.get_user(db, requester_id)
+    if requester is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if requester.phonenumber != db_reservation.customer_phone:
+        raise HTTPException(status_code=403, detail="Permission Denied")
+
+    if reservation_update.table_id is not None:
+        db_reservation.table_id = reservation_update.table_id
+    if reservation_update.reservation_time is not None:
+        if db_reservation.reservation_time <= datetime.now(UTC) + timedelta(hours=2):
+            raise HTTPException(status_code=409, detail="Reservation can't be modified")
+        else:
+            db_reservation.reservation_time = reservation_update.reservation_time
+
+    # 확정된 테이블
+    payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        db_table.company_id,
+        {
+            "type": "table_updated",
+            "payload": payload,
+        },
+    )
+
+    updated_reservation, changed_tables, just_fixed, outbid_reservation = result
+    reservation_user = (
+        db.query(models.User)
+        .filter(
+            models.User.phonenumber == updated_reservation.customer_phone,
+            models.User.role == "customer",
+        )
+        .first()
+    )
+
+    # 예약이 0개가 된 테이블
+    for table in changed_tables:
+        payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+        background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "table_updated",
+                "payload": payload,
+            },
+        )
+        background_tasks.add_task(
+            manager.broadcast,
+            table.company_id,
+            {
+                "type": "reservation_updated",
+                "payload": {"table_id": table.id},
+            },
+        )
+
+    background_tasks.add_task(
+        manager.broadcast,
+        db_table.company_id,
+        {"type": "reservation_updated", "payload": {"table_id": db_table.id}},
+    )
+
+    if just_fixed and reservation_user is not None:
+        db_company = crud.get_company(db, db_table.company_id)
+        if reservation_user.phonenumber is None:
+            print("알림톡 번호 없음.")
+        else:
+            background_tasks.add_task(
+                solapi_alimtalk.send_alimtalk,
+                reservation_user.phonenumber,
+                "KA01TP260918001413298TOpXYrgbaAL",
+                "KA01PF260917045443138PqRAzw6E07o",
+                {
+                    "#{매장명}": db_company.name,
+                    "#{테이블이름}": db_table.tablename,
+                },
+            )
+    if outbid_reservation is not None:
+        db_company = crud.get_company(db, db_table.company_id)
+        background_tasks.add_task(
+            solapi_alimtalk.send_alimtalk,
+            outbid_reservation.customer_phone,
+            "KA01TP261030063106160YcMUXm3SyIL",
+            "KA01PF260917045443138PqRAzw6E07o",
+            {"#{매장명}": db_company.name, "#{테이블이름}": db_table.tablename},
+        )
+    return updated_reservation
 
 
 # =====================
@@ -2437,6 +2538,18 @@ async def websocket_company(websocket: WebSocket, company_id: str):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(company_id, websocket)
+
+
+@app.websocket("/ws/customers/companies/{company_id}")
+async def websocket_customer_company(websocket: WebSocket, company_id: str):
+    channel = f"customer:{company_id}"
+    await manager.connect(channel, websocket)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(channel, websocket)
 
 
 @app.get("/health")

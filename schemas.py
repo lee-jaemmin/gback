@@ -177,7 +177,7 @@ class TableResponse(TableBase):
     class Config:
         from_attributes = True
 
-class PublicTableResponse(BaseModel):
+class CustomerTableResponse(BaseModel):
     id: str
     company_id: str
     tablename: str
@@ -488,13 +488,21 @@ class ReservationResponse(ReservationBase):
     class Config:
         from_attributes = True
 
-class PublicReservationResponse(BaseModel):
+class CustomerReservationUpdate(BaseModel):
+    reservation_id: int
+    bid_price: Optional[int] = None
+    table_id: Optional[str] = None
+    reservation_time: Optional[datetime] = None
+    arrival_at: Optional[datetime] = None        
+
+class CustomerReservationResponse(BaseModel):
     id: int
     table_id: str
     reservation_time: datetime
     bid_price: int
     is_fixed: bool
     fixed_at: datetime
+    arrival_at: datetime
 
 class ReservationBidResponse(BaseModel):
     id: int
