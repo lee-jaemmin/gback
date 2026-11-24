@@ -2288,7 +2288,10 @@ async def reservation_check_in(
 # =====================
 # HISTORY API
 # =====================
-@app.post("/tables/{table_id}/out", response_model=schemas.TableHistoryResponse)
+@app.post(
+    "/tables/{table_id}/out",
+    response_model=schemas.TableHistoryResponse | dict[str, str],
+)
 async def table_out(
     table_id: str,
     background_tasks: BackgroundTasks,
@@ -2320,6 +2323,7 @@ async def table_out(
         raise HTTPException(status_code=404, detail="Table not found")
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
+    history_skipped = result == "HISTORY_SKIPPED"
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
     customer_payload = schemas.CustomerTableResponse.model_validate(
         db_table
@@ -2343,6 +2347,8 @@ async def table_out(
 
     background_tasks.add_task(send_table_out_pushes, company_id, table_id, tablename)
 
+    if history_skipped:
+        return {"message": "Table out succeeded without history"}
     return result
 
 

@@ -1737,27 +1737,36 @@ def table_out(
 
     out_at = datetime.now(UTC)
     business_date_source = db_table.registered_at or out_at
-
-    db_history = TableHistory(
-        table_id=table_id,
-        tablename=db_table.tablename,
-        section=db_table.section,
-        customer_name=db_table.customer,
-        customer_phone=db_table.phonenumber,
-        persons=db_table.persons,
-        remark=db_table.remark,
-        user_id=db_table.user_id,
-        user_name=db_table.user_name,
-        company_id=db_table.company_id,
-        registered_at=db_table.registered_at,
-        out_at=out_at,
-        business_date=get_business_date(business_date_source),
-        closed_reason=closed_reason,
-        purchase_summary=db_table.purchase_summary,
+    registered_at = db_table.registered_at
+    if registered_at is not None and registered_at.tzinfo is None:
+        registered_at = registered_at.replace(tzinfo=UTC)
+    should_create_history = (
+        registered_at is None
+        or out_at - registered_at > timedelta(minutes=20)
     )
 
-    db.add(db_history)
-    db.flush()
+    db_history = None
+    if should_create_history:
+        db_history = TableHistory(
+            table_id=table_id,
+            tablename=db_table.tablename,
+            section=db_table.section,
+            customer_name=db_table.customer,
+            customer_phone=db_table.phonenumber,
+            persons=db_table.persons,
+            remark=db_table.remark,
+            user_id=db_table.user_id,
+            user_name=db_table.user_name,
+            company_id=db_table.company_id,
+            registered_at=db_table.registered_at,
+            out_at=out_at,
+            business_date=get_business_date(business_date_source),
+            closed_reason=closed_reason,
+            purchase_summary=db_table.purchase_summary,
+        )
+
+        db.add(db_history)
+        db.flush()
 
     db_notification = Notification(
         company_id=db_table.company_id,
@@ -1770,16 +1779,17 @@ def table_out(
     db.flush()
 
     for purchase in db_purchases:
-        db_history_purchase = TableHistoryPurchase(
-            history_id=db_history.id,
-            item_id=purchase.item_id,
-            item_name=purchase.item_name,
-            quantity=purchase.quantity,
-            unit_price=purchase.unit_price,
-            total_price=purchase.total_price,
-            created_at=datetime.now(UTC),
-        )
-        db.add(db_history_purchase)
+        if db_history is not None:
+            db_history_purchase = TableHistoryPurchase(
+                history_id=db_history.id,
+                item_id=purchase.item_id,
+                item_name=purchase.item_name,
+                quantity=purchase.quantity,
+                unit_price=purchase.unit_price,
+                total_price=purchase.total_price,
+                created_at=datetime.now(UTC),
+            )
+            db.add(db_history_purchase)
 
     # 이제 구매 내역 지우기
     for purchase in db_purchases:
@@ -1787,21 +1797,22 @@ def table_out(
 
     db_logs = get_purchase_logs(db, table_id)
     for log in db_logs:
-        db_log_history = LogHistory(
-            history_id=db_history.id,
-            table_id=log.table_id,
-            item_id=log.item_id,
-            set_menu_id=log.set_menu_id,
-            item_name=log.item_name,
-            batch_id=log.batch_id,
-            user_id=log.user_id,
-            user_name=log.user_name,
-            quantity=log.quantity,
-            unit_price=log.unit_price,
-            total_price=log.quantity * log.unit_price,
-        )
+        if db_history is not None:
+            db_log_history = LogHistory(
+                history_id=db_history.id,
+                table_id=log.table_id,
+                item_id=log.item_id,
+                set_menu_id=log.set_menu_id,
+                item_name=log.item_name,
+                batch_id=log.batch_id,
+                user_id=log.user_id,
+                user_name=log.user_name,
+                quantity=log.quantity,
+                unit_price=log.unit_price,
+                total_price=log.quantity * log.unit_price,
+            )
+            db.add(db_log_history)
         db.delete(log)
-        db.add(db_log_history)
         db.flush()
 
     # 테이블 초기화
@@ -1822,7 +1833,7 @@ def table_out(
     db_table.from_bid = False
 
     db.commit()
-    return db_history
+    return db_history or "HISTORY_SKIPPED"
 
 
 def get_history(
