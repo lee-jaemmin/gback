@@ -1114,7 +1114,7 @@ def read_public_tables(company_id: str, db: Session = Depends(get_db)):
 
 
 @app.get(
-    "/public/tables/{table_id}",
+    "/customer/tables/{table_id}",
     response_model=schemas.CustomerTableResponse,
 )
 def read_public_table(table_id: str, db: Session = Depends(get_db)):
