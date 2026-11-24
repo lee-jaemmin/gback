@@ -2108,7 +2108,7 @@ def reset_daily_state(db: Session):
 # ========================
 # MOVE
 # ========================
-def moveTable(db: Session, from_table_id: str, to_table_id: str):
+def move_table(db: Session, from_table_id: str, to_table_id: str):
     db_from = get_table(db, from_table_id)
     db_to = get_table(db, to_table_id)
 

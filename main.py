@@ -2210,12 +2210,23 @@ async def table_out(
     if result == "TABLE_NOT_USING":
         raise HTTPException(status_code=400, detail="Table is not using")
     payload = schemas.TableResponse.model_validate(db_table).model_dump(mode="json")
+    customer_payload = schemas.CustomerTableResponse.model_validate(
+        db_table
+    ).model_dump(mode="json")
     background_tasks.add_task(
         manager.broadcast,
         company_id,
         {
             "type": "table_updated",
             "payload": payload,
+        },
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{company_id}",
+        {
+            "type": "table_updated",
+            "payload": customer_payload,
         },
     )
 
@@ -2389,7 +2400,7 @@ async def move_table(
     if not is_company_staff:
         raise HTTPException(status_code=409, detail="PERMISSION DENIED")
 
-    result = crud.moveTable(db, from_table_id, to_table_id)
+    result = crud.move_table(db, from_table_id, to_table_id)
     if result == "FROM TABLE NOT USING":
         raise HTTPException(status_code=422, detail="FROM TABLE NOT USING")
     if result == "TO TABLE ALREADY IN USE":
@@ -2404,6 +2415,23 @@ async def move_table(
     background_tasks.add_task(
         manager.broadcast, db_company.id, {"type": "table_updated", "payload": payload}
     )
+    customer_payload = schemas.CustomerTableResponse.model_validate(result).model_dump(
+        mode="json"
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{db_company.id}",
+        {"type": "table_updated", "payload": customer_payload},
+    )
+    customer_payload = schemas.CustomerTableResponse.model_validate(
+        db_from_table
+    ).model_dump(mode="json")
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer:{db_company.id}",
+        {"type": "table_updated", "payload": customer_payload},
+    )
+
     return {"message": "Table moved successfully"}
 
 
