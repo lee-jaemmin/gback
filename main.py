@@ -850,7 +850,11 @@ async def update_table(
     if not is_company_staff:
         raise HTTPException(status_code=409, detail="Permission Denied")
     table = crud.update_table(db, table_update, table_id)
+
     payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+    customer_payload = schemas.CustomerTableResponse.model_validate(table).model_dump(
+        mode="json"
+    )
     company_id = table.company_id
     background_tasks.add_task(
         manager.broadcast,
@@ -862,6 +866,14 @@ async def update_table(
             # TableResponse 스키마 형식에 맞게 읽어서
             # Pydantic 객체로 만들어라
             # 그다음에 json
+        },
+    )
+    background_tasks.add_task(
+        manager.broadcast,
+        f"customer: {company_id}",
+        {
+            "type": "table_updated",
+            "payload": customer_payload,
         },
     )
     if previous_status == "available" and table.status == "inuse":
@@ -1011,12 +1023,23 @@ async def allow_all_bids(
         changed_tables = crud.delete_fixed_users_reservations(db, top_bid)
 
         payload = schemas.TableResponse.model_validate(table).model_dump(mode="json")
+        customer_payload = schemas.CustomerTableResponse.model_validate(
+            table
+        ).model_dump(mode="json")
         background_tasks.add_task(
             manager.broadcast,
             table.company_id,
             {
                 "type": "table_updated",
                 "payload": payload,
+            },
+        )
+        background_tasks.add_task(
+            manager.broadcast,
+            f"customer: {company_id}",
+            {
+                "type": "table_updated",
+                "payload": customer_payload,
             },
         )
         background_tasks.add_task(
@@ -1029,6 +1052,9 @@ async def allow_all_bids(
             payload = schemas.TableResponse.model_validate(changed_table).model_dump(
                 mode="json"
             )
+            customer_payload = schemas.CustomerTableResponse.model_validate(
+                table
+            ).model_dump(mode="json")
             background_tasks.add_task(
                 manager.broadcast,
                 changed_table.company_id,
@@ -1037,6 +1063,15 @@ async def allow_all_bids(
                     "payload": payload,
                 },
             )
+            background_tasks.add_task(
+                manager.broadcast,
+                f"customer: {company_id}",
+                {
+                    "type": "table_updated",
+                    "payload": customer_payload,
+                },
+            )
+
             background_tasks.add_task(
                 manager.broadcast,
                 changed_table.company_id,
@@ -1580,7 +1615,6 @@ def read_reservations_by_table(
     return db_reservations
 
 
-
 @app.get(
     "/tables/{table_id}/reservation-bids",
     response_model=list[schemas.ReservationBidResponse],
@@ -1609,6 +1643,7 @@ def reservations_under(
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return crud.reservation_under(db, db_user.phonenumber)
+
 
 @app.patch("/reservations/{reservation_id}", response_model=schemas.ReservationResponse)
 async def update_reservation(
@@ -1831,6 +1866,7 @@ async def delete_reservation(
 
     return {"message": "Reservation deleted successfully"}
 
+
 # 손님용
 @app.get(
     "/public/tables/{table_id}/reservations",
@@ -1845,6 +1881,7 @@ def read_reservations_by_table_public(
         raise HTTPException(status_code=404, detail="Table not found")
     db_reservations = crud.get_reservations_by_table(db, table_id)
     return db_reservations
+
 
 @app.patch("/customer-reservation-move")
 async def customer_reservation_move(
@@ -1915,7 +1952,10 @@ async def customer_reservation_move(
         {"type": "reservation_updated", "payload": {"table_id": db_to_table.id}},
     )
 
-@app.patch("/customer/modify-reservations/", response_model=schemas.CustomerReservationResponse)
+
+@app.patch(
+    "/customer/modify-reservations/", response_model=schemas.CustomerReservationResponse
+)
 async def customer_update_reservation(
     reservation_update: schemas.CustomerReservationUpdate,
     background_tasks: BackgroundTasks,
@@ -1928,7 +1968,7 @@ async def customer_update_reservation(
     db_table = crud.get_table(db, db_reservation.table_id)
     if db_table is None:
         raise HTTPException(status_code=404, detail="Table not found")
-    
+
     requester_id = firebase_claims["uid"]
     requester = crud.get_user(db, requester_id)
     if requester is None:
